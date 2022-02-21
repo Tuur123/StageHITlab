@@ -1,0 +1,1 @@
+simple blink detector using the Pupil Labs IPC API and the Pupil Core eyetracker
