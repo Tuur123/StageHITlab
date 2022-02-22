@@ -2,3 +2,4 @@ Scripts
 *.cfg
 Lib
 Include
+__pycache__
