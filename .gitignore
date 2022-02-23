@@ -4,3 +4,5 @@ Lib
 Include
 __pycache__
 *.mp4
+share
+etc
