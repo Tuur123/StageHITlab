@@ -6,3 +6,5 @@ __pycache__
 *.mp4
 share
 etc
+.vscode
+VasteEyetrackerHeatmap/.vscode/launch.json
