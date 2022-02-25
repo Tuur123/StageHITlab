@@ -7,8 +7,8 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter
 
 # options
-filter = 2
-window = False # in seconds or false if no window
+filter = 7
+window = 0.5 # in seconds or false if no window
 
 files = glob.glob('output*.mp4')
 if len(files) != 0:
