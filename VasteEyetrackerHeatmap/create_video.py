@@ -8,7 +8,9 @@ from scipy.ndimage import gaussian_filter
 
 # options
 filter = 7
-window = 0.5 # in seconds or false if no window
+window = False # in seconds or false if no window
+participant = 'Jelle'
+
 
 files = glob.glob('output*.mp4')
 if len(files) != 0:
@@ -17,25 +19,18 @@ else:
     file_indx = 0
 
 
-df = pd.read_csv('video Metrics.tsv', sep='\t')
-df = df.dropna(axis=1)
+df = pd.read_csv('video Data Export-ivt.tsv', sep='\t')
 
-indexNames = df[ (df['FixationPointX'] < 0) | (df['FixationPointX'] > 1) | (df['FixationPointY'] < 0) | (df['FixationPointY'] > 1)].index
-df.drop(indexNames , inplace=True)
-
-df['X'] = df['FixationPointX'] * 1280
-df['Y'] = df['FixationPointY'] * 720
+df['X'] = df['Gaze point X']
+df['Y'] = df['Gaze point Y']
 
 df['X'] = np.array(df['X'].values).astype(np.uint16)
 df['Y'] = np.array(df['Y'].values).astype(np.uint16)
 
-xMin = df['X'].min()
-xMax = df['X'].max()
+w = df['Recording resolution width'][0]
+h = df['Recording resolution height'][0]
 
-yMin = df['Y'].min()
-yMax = df['Y'].max()
-
-last_timestamp = df.iloc[-1, df.columns.get_loc('Start')]
+last_timestamp = df.iloc[-1, df.columns.get_loc('Recording timestamp')]
 
 vidcap = cv2.VideoCapture('vid.mp4')
 success, frame = vidcap.read()
@@ -61,7 +56,7 @@ count = 0
 
 def make_heatmap(x, y):
 
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=(width, height), range=[[xMin, xMax], [yMin, yMax]])
+    heatmap, xedges, yedges = np.histogram2d(x, y, bins=(width, height), range=[[0, w], [0, h]])
     heatmap *= 255
     heatmap = heatmap.astype(np.uint8).T
     heatmap = gaussian_filter(heatmap, sigma=filter)
@@ -85,7 +80,10 @@ def process_image(frame, frameCount):
     if last_timestamp < window_end:
         return None
 
-    data = df.loc[(df['Start'] > window_start) & (df['Start'] < window_end) & (df['Participant'] == 'Jelle')]
+    if participant == 'all':
+        data = df.loc[(df['Recording timestamp'] > window_start) & (df['Recording timestamp'] < window_end)]
+    else:
+        data = df.loc[(df['Recording timestamp'] > window_start) & (df['Recording timestamp'] < window_end) & (df['Participant name'] == participant)]
 
     heatmap = make_heatmap(data['X'], data['Y'])
 
