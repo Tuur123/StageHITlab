@@ -7,3 +7,6 @@ share
 etc
 .vscode
 VasteEyetrackerHeatmap/.vscode/launch.json
+frames
+output*mp4
+*.npy

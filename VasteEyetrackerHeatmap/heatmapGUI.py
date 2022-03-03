@@ -20,10 +20,9 @@ class HeatmapGUI(tk.Tk):
         super().__init__()
 
         self.updating = False
-        self.update_thread = threading.Thread(target=self.updateUI)
         self.valid_columns = ['Recording timestamp', 'Recording resolution width', 'Recording resolution height', 'Participant name', 'Gaze point X', 'Gaze point Y']
 
-        self.img = ImageTk.PhotoImage(file='placeholder.png')
+        self.img = ImageTk.PhotoImage(file='./assets/placeholder.png')
         self.canvas = Canvas(self, width = 280, height = 200)
         self.canvas.grid(rowspan=5, column=0)    
         self.container = self.canvas.create_image(20, 20, anchor=NW, image=self.img)
@@ -106,6 +105,7 @@ class HeatmapGUI(tk.Tk):
         self.stop_btn['state'] ='normal'
         self.export_btn['state'] = 'disabled'
 
+        self.update_thread = threading.Thread(target=self.updateUI)
         self.updating = True
         self.update_thread.start()
 
@@ -118,15 +118,15 @@ class HeatmapGUI(tk.Tk):
     def progress(self, value):
         if self.progress_bar['value'] < 100:
             self.progress_bar['value'] = value
+            return False
         else:
             self.stop()
             showinfo(message='Done!')
+            return True
 
     def updateUI(self):
-
         
-        while self.updating:
-
+        while True:
             time.sleep(0.2)
             try:
                 img = self.hm.result
@@ -140,7 +140,8 @@ class HeatmapGUI(tk.Tk):
                     self.img = ImageTk.PhotoImage(image=img)
                     self.canvas.itemconfig(self.container, image=self.img)
 
-                self.progress(self.hm.percent_done)
+                if self.progress(self.hm.percent_done) or not self.updating:
+                    break
 
             except Exception as e:
                 print(e)
