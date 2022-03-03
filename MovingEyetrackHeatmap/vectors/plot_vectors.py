@@ -5,7 +5,7 @@ from matplotlib import animation
 vectors = np.load('vectors.npy')
 X, Y = vectors.shape[1:3]
 
-step = 3
+step = 10
 
 
 fig, ax = plt.subplots(1,1, figsize=(12, 12))
