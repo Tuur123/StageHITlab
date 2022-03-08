@@ -38,7 +38,7 @@ cv2.imwrite(folder + str(counter).zfill(5) + ".png", last)
 kp1, des1 = orb.detectAndCompute(last, None)
 
 # cutoff, the minimum number of keypoints
-cutoff = 50
+cutoff = 10
 
 # count number of frames
 prev = None
