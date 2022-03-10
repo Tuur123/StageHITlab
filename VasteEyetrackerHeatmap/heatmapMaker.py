@@ -6,7 +6,6 @@ import time
 import cv2
 import numpy as np
 import pandas as pd
-from gauss_filter import Gaussian2D
 from scipy.ndimage import gaussian_filter
 from scipy.signal import convolve2d
 
