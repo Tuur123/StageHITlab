@@ -4,16 +4,17 @@ import shutil
 
 class Panorama:
 
-    def __init__(self, video, name):
+    def __init__(self, video, name, size):
 
         self.name = name
         self.folder = "frames/"
-        if os.path.isdir(self.folder):
-            shutil.rmtree(self.folder)
-        os.mkdir(self.folder)
+        # if os.path.isdir(self.folder):
+        #     shutil.rmtree(self.folder)
+        # os.mkdir(self.folder)
 
         # open vidcap
         self.cap = cv2.VideoCapture(video) # your video here
+        self.size = size
     
     def Create_Panorama(self):
         self.Decimate()
@@ -36,13 +37,13 @@ class Panorama:
         # store the first frame
         _, last = self.cap.read()
         last = self.__rescale(last)
-        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", last)
+        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, self.size))
 
         # get the first frame's stuff
         kp1, des1 = orb.detectAndCompute(last, None)
 
         # cutoff, the minimum number of keypoints
-        cutoff = 10
+        cutoff = 5
         # count number of frames
         prev = None
         while True:
@@ -76,14 +77,14 @@ class Panorama:
                 last = frame
                 kp1 = kp2
                 des1 = des2
-                cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", last)
-                print("\rNew Frame: " + str(counter), end='', flush=True)
+                cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, self.size))
+                print("\rSaved " + str(counter) + " frames", end='', flush=True)
 
             prev = frame
 
         # also save last frame
         counter += 1
-        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", prev)
+        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(prev, self.size))
         
         self.cap.release()
     
@@ -115,4 +116,10 @@ class Panorama:
 
         else:
             cv2.imwrite(self.name, stitched)
-            return None
+            return stitched
+
+
+if __name__ == "__main__":
+    pan = Panorama('waak/waak.mp4', 'waak/waak_panorama.png', (256, 256))
+
+    stiched = pan.Stitch()

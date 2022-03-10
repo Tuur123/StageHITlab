@@ -6,31 +6,69 @@ from queue import Queue
 from multiprocessing.pool import ThreadPool
 from imutils.Panorama import Panorama
 
-class Convert2D:
-
-    def __init__(self, data, video, panorama, tracker, threads):
-
-        if panorama == None:
-            print("Creating panorama. This can take a while...")
-            panorama_maker = Panorama(video, None)
-            self.world_panorama = panorama_maker.Create_Panorama()
-        else:
-            self.world_panorama = cv2.imread(panorama)
+class DataHandler:
+    
+    def __init__(self, data_file, video, tracker) -> None:
 
         self.vidcap = cv2.VideoCapture(video)
         self.video_fps = self.vidcap.get(cv2.CAP_PROP_FPS)
         self.total_frames = int(self.vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.world_height = int(self.vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.world_width = int(self.vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.frame_time = (1 / self.video_fps) * 1000 # milliseconden
 
         if tracker == 'pupillabs':
 
-            df = pd.read_csv(data)
+            df = pd.read_csv(data_file)
             df['X'] = df['norm_pos_x'] * self.world_width
             df['Y'] = self.world_height - df['norm_pos_y'] * self.world_height
             df = df[['world_index', 'X', 'Y']]
 
             self.data= df.astype({'world_index': int, 'X': int, 'Y': int})
+
+        if tracker == 'tobii':
+
+            df = pd.read_csv(data_file, sep='\t')
+
+            df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y']]
+
+            if df['Recording timestamp'][0] != 0: # we need to make sure timestamps start at 0
+                df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0]) / 1000
+
+            df = df.loc[~(df[['Gaze point X', 'Gaze point Y']]==0).all(axis=1)]
+
+            data = pd.DataFrame(columns=['world_index', 'Gaze point X', 'Gaze point Y'])
+
+            # convert timestamps into frame indeces
+            for frame_idx in range(self.total_frames):
+                
+                window_start = 0
+                window_end = self.frame_time * frame_idx + self.frame_time
+
+                tmp = df.loc[(df['Recording timestamp'] >= window_start) & (df['Recording timestamp'] < window_end)].mean()
+                tmp['world_index'] = frame_idx
+
+                data.loc[frame_idx] = tmp
+
+                window_start = window_end
+
+            data['X'] = np.array(data['Gaze point X'].values).astype(np.uint16)
+            data['Y'] = np.array(data['Gaze point Y'].values).astype(np.uint16)
+            data['world_index'] = np.array(data['world_index'].values).astype(np.uint16)
+            self.data = data[['world_index', 'X', 'Y']]
+
+class Convert2D(DataHandler):
+
+    def __init__(self, data, video, panorama, tracker, threads, scaling):
+
+        super().__init__(data, video, tracker)
+
+        if panorama == 'create':
+            print("Creating panorama. This can take a while...\n")
+            panorama_maker = Panorama(video, 'waak_panorama.png', (self.world_width // scaling, self.world_height // scaling))
+            self.world_panorama = panorama_maker.Create_Panorama()
+        else:
+            self.world_panorama = cv2.imread(panorama)
 
         # Initiate SIFT detector
         self.sift = cv2.SIFT_create()
@@ -40,20 +78,23 @@ class Convert2D:
         index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
         search_params = dict(checks = 50)
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
-
-        self.world_panorama = cv2.resize(self.world_panorama, (1400, self.world_height))
-
+        
+        self.frame_idx = 0
         self.thread_count = threads
-        self.queue = Queue(maxsize=100)
+        self.queue = Queue(maxsize=200)
 
     def Get2D(self):
 
         pool = ThreadPool(self.thread_count)
+
         fill_thread = threading.Thread(target=self.QueueFiller)
         fill_thread.start()
 
+        update_thread = threading.Thread(target=self.UpdateUI)
+        update_thread.start()
+
         results = []
-        for i in range(0, self.thread_count):
+        for _ in range(0, self.thread_count):
             results.append(pool.apply_async(self.Convert))
 
         pool.close()
@@ -67,19 +108,31 @@ class Convert2D:
 
         df = pd.DataFrame(tmp, columns=['world_index', 'X', 'Y'])
         df = df.set_index('world_index')
-        df = df.astype({'X': int, 'Y': int})
+        data = data.fillna(0)
+        data = data.astype({'X': int, 'Y': int})
         
-        return df.sort_index()
+        return df.sort_index(), self.world_panorama
 
     def QueueFiller(self):
 
         success, frame = self.vidcap.read()
-        frame_idx = 0
+        self.frame_idx = 0
         while success:
-            self.queue.put([frame_idx, frame])
+            self.queue.put([self.frame_idx, frame])
             success, frame = self.vidcap.read()
-            frame_idx += 1
+            self.frame_idx += 1
+            print(f"         ", end='\r')
+        self.vidcap.release()
+    
+    def UpdateUI(self):
+        
+        while self.queue == 0:
+            pass # wait for q to fill up
 
+        while self.queue != 0:
+            print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='')
+        print()
+        
     def Convert(self):
 
         results = []
@@ -116,9 +169,9 @@ class Convert2D:
         return results
 
 
+
 if __name__ == "__main__":
-    convert = Convert2D('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', './pupillabs/panorama.png', 'pupillabs', 5)
+    convert = Convert2D('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii', 5, 4)
 
     results = convert.Get2D()
-
-    print(results.head())
+    results[0].to_csv('waak.csv')
