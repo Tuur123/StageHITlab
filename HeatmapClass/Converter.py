@@ -59,16 +59,11 @@ class DataHandler:
 
 class Convert2D(DataHandler):
 
-    def __init__(self, data, video, panorama, tracker, threads, scaling):
+    def __init__(self, data, video, panorama, tracker, threads):
 
         super().__init__(data, video, tracker)
 
-        if panorama == 'create':
-            print("Creating panorama. This can take a while...\n")
-            panorama_maker = Panorama(video, 'waak_panorama.png', (self.world_width // scaling, self.world_height // scaling))
-            self.world_panorama = panorama_maker.Create_Panorama()
-        else:
-            self.world_panorama = cv2.imread(panorama)
+        self.world_panorama = panorama
 
         # Initiate SIFT detector
         self.sift = cv2.SIFT_create()
@@ -82,7 +77,7 @@ class Convert2D(DataHandler):
         self.frame_idx = 0
         self.thread_count = threads
         self.queue = Queue(maxsize=200)
-
+        
     def Get2D(self):
 
         pool = ThreadPool(self.thread_count)
@@ -91,6 +86,7 @@ class Convert2D(DataHandler):
         fill_thread.start()
 
         update_thread = threading.Thread(target=self.UpdateUI)
+        update_thread.setDaemon(True)
         update_thread.start()
 
         results = []
@@ -106,12 +102,11 @@ class Convert2D(DataHandler):
         for r in results:
             tmp.extend(r)
 
-        df = pd.DataFrame(tmp, columns=['world_index', 'X', 'Y'])
-        df = df.set_index('world_index')
+        data = pd.DataFrame(tmp, columns=['world_index', 'X', 'Y'])
         data = data.fillna(0)
         data = data.astype({'X': int, 'Y': int})
         
-        return df.sort_index(), self.world_panorama
+        return data.sort_values('world_index')
 
     def QueueFiller(self):
 
@@ -126,11 +121,11 @@ class Convert2D(DataHandler):
     
     def UpdateUI(self):
         
-        while self.queue == 0:
+        while self.queue.empty():
             pass # wait for q to fill up
 
-        while self.queue != 0:
-            print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='')
+        while not self.queue.empty():
+            print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='', flush=True)
         print()
         
     def Convert(self):
@@ -175,3 +170,4 @@ if __name__ == "__main__":
 
     results = convert.Get2D()
     results[0].to_csv('waak.csv')
+    print("saved csv file")
