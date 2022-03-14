@@ -41,7 +41,7 @@ class HeatmapMaker:
 
 
 if __name__ == "__main__":
-    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii')
+    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii', filter=3)
     heatmap, pan = map.make_heatmap()
 
 
