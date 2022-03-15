@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from queue import Queue
 from multiprocessing.pool import ThreadPool
-from imutils.Panorama import Panorama
 
 class DataHandler:
     

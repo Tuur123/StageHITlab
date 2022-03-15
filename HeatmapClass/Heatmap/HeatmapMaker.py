@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
 from Converter import Convert2D
-from imutils.Panorama import Panorama
+from Panorama import Panorama
 from scipy.ndimage import gaussian_filter
 
 import matplotlib.pyplot as plt
 
 class HeatmapMaker:
 
-    def __init__(self, data, video, panorama, tracker, threads=5, scaling=1, panorama_name=None, filter=7) -> None:
+    def __init__(self, data, video, tracker, threads=5, scaling=1, panorama_name=None, filter=7, panorama='create') -> None:
 
 
         if panorama: # panorama not None -> expect data from mobile eyetracker
@@ -41,7 +41,7 @@ class HeatmapMaker:
 
 
 if __name__ == "__main__":
-    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii', filter=3)
+    map = HeatmapMaker('../waak/data.tsv', '../waak/waak.mp4', 'tobii', panorama='../waak/waak_panorama.png', filter=3)
     heatmap, pan = map.make_heatmap()
 
 
