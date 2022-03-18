@@ -1,10 +1,12 @@
 import threading
 import cv2
-import cProfile as Profile
+from cv2 import cuda
 import numpy as np
 import pandas as pd
 from queue import Queue
-from multiprocessing.pool import ThreadPool
+
+from sklearn.preprocessing import MinMaxScaler
+
 
 class DataHandler:
     
@@ -57,9 +59,10 @@ class DataHandler:
             data['world_index'] = np.array(data['world_index'].values).astype(np.uint16)
             self.data = data[['world_index', 'X', 'Y']]
 
-class Convert2D(DataHandler):
 
-    def __init__(self, data, video, panorama, tracker, threads):
+class Convert2DGPU(DataHandler):
+
+    def __init__(self, data, video, panorama, tracker):
 
         super().__init__(data, video, tracker)
 
@@ -68,20 +71,38 @@ class Convert2D(DataHandler):
         else:
             self.world_panorama = panorama
 
-        # Initiate SIFT detector
-        self.sift = cv2.SIFT_create()
 
-        FLANN_INDEX_KDTREE = 1
-        self.MIN_MATCH_COUNT = 10
-        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-        search_params = dict(checks = 50)
-        self.flann = cv2.FlannBasedMatcher(index_params, search_params)
+        # Initiate matcher
+        self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_HAMMING)
+        self.MIN_MATCH_COUNT = 4
+
+        # panorama stream
+        pan_stream = cv2.cuda_Stream()
+
+        # Initiate ORB detector
+        self.orb = cuda.ORB_create(nfeatures=50000, scoreType=cv2.ORB_HARRIS_SCORE, blurForDescriptor=True)
+
+        # Load the image onto the GPU
+        cuMat = cv2.cuda_GpuMat()
+        cuMat.upload(self.world_panorama, pan_stream)
+
+        # Convert the color on the GPU
+        cuMat = cv2.cuda.cvtColor(cuMat, cv2.COLOR_BGR2GRAY, stream=pan_stream)
+
+        # Create the CUDA ORB detector and detect keypoints/descriptors
+        kp2, self.des2 = self.orb.detectAndComputeAsync(cuMat, None, stream=pan_stream)
+
+        # Download the keypoints from the GPU memory
+        self.kp2 = self.orb.convert(kp2)
+        pan_stream.waitForCompletion()
 
         self.frame_idx = 0
-        self.thread_count = threads
         self.queue = Queue(maxsize=200)
-
+        self.updating = True
+        self.results = []
+    
     def Get2DNoThreats(self):
+
         fill_thread = threading.Thread(target=self.QueueFiller)
         fill_thread.start()
 
@@ -89,50 +110,42 @@ class Convert2D(DataHandler):
         update_thread.setDaemon(True)
         update_thread.start()
 
-        Profile.runctx('self.Convert()', globals(), locals(), '0threads.prof')
+        return self.Convert()
 
     def Get2D(self):
 
-        pool = ThreadPool(self.thread_count)
-
         fill_thread = threading.Thread(target=self.QueueFiller)
         fill_thread.start()
 
         update_thread = threading.Thread(target=self.UpdateUI)
-        update_thread.setDaemon(True)
         update_thread.start()
 
-        results = []
-        for _ in range(0, self.thread_count):
-            results.append(pool.apply_async(self.Convert))
+        while self.queue.qsize() < (self.queue.maxsize // 4): # wait for queue to fill up
+            pass
 
-        pool.close()
-        pool.join()
+        results = self.Convert()
+        self.updating = False
 
-        results = [r.get() for r in results]
-
-        tmp = []
-        for r in results:
-            tmp.extend(r)
-
-        data = pd.DataFrame(tmp, columns=['world_index', 'X', 'Y'])
+        data = pd.DataFrame(results, columns=['world_index', 'X', 'Y'])
         data = data.fillna(0)
+
         data = data.astype({'X': int, 'Y': int})
         
-        return data.sort_values('world_index')
+        return data
 
     def QueueFiller(self):
 
         success, frame = self.vidcap.read()
         self.frame_idx = 0
+
         while success:
 
             _, x, y = self.data.loc[(self.data['world_index'] == self.frame_idx)].mean()
             self.queue.put([self.frame_idx, frame, x, y])
+
             success, frame = self.vidcap.read()
             self.frame_idx += 1
 
-            print(f"         ", end='\r')
         self.vidcap.release()
     
     def UpdateUI(self):
@@ -140,49 +153,74 @@ class Convert2D(DataHandler):
         while self.queue.empty():
             pass # wait for q to fill up
 
-        while not self.queue.empty():
+        while not self.queue.qsize() == 0 and self.updating:
             print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='', flush=True)
-        print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='\n', flush=True)
+        print()
         
     def Convert(self):
 
+        frame_stream = cv2.cuda_Stream()
         results = []
-        kp2, des2 = self.sift.detectAndCompute(self.world_panorama, None)
 
-        while not self.queue.empty():
+        while not self.queue.qsize() == 0:
 
             frame_idx, frame, x, y = self.queue.get()
 
-            # find the keypoints and descriptors with SIFT
-            kp1, des1 = self.sift.detectAndCompute(frame, None)
-            matches = self.flann.knnMatch(des1,des2,k=2)
+            # Load the image onto the GPU
+            cuMatFrame = cv2.cuda_GpuMat()
+            cuMatFrame.upload(frame, stream=frame_stream)
+
+            # Convert the color on the GPU
+            cuMatFrame = cv2.cuda.cvtColor(cuMatFrame, cv2.COLOR_BGR2GRAY, stream=frame_stream)
+
+            # Detect keypoints/descriptors                
+            kp1, des1 = self.orb.detectAndComputeAsync(cuMatFrame, None, stream=frame_stream)
+
+            gpu_matches = self.matcher.knnMatchAsync(des1, self.des2, k=2, stream=frame_stream)
+            frame_stream.waitForCompletion()
+
+            # Download the keypoints and matches from GPU memory
+            kp1 = self.orb.convert(kp1)
+            matches = self.matcher.knnMatchConvert(gpu_matches)
 
             # store all the good matches as per Lowe's ratio test.
             good = []
-            for m,n in matches:
+            for m, n in matches:
                 if m.distance < 0.7 * n.distance:
                     good.append(m)
 
             if len(good) > self.MIN_MATCH_COUNT:
 
                 src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-                dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+                dst_pts = np.float32([ self.kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
 
                 M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-                pan_x, pan_y = cv2.perspectiveTransform(np.float32([[x, y]]).reshape(-1,1,2), M)[0][0]
 
-                results.append([frame_idx, pan_x, pan_y])
+                if M is not None:
+                    pan_x, pan_y = cv2.perspectiveTransform(np.float32([[x, y]]).reshape(-1,1,2), M)[0][0]
 
+                    results.append([frame_idx, pan_x, pan_y])
+
+                else:
+                    results.append([frame_idx, None, None])
             else:
                 results.append([frame_idx, None, None])
 
         return results
 
 
-
 if __name__ == "__main__":
-    convert = Convert2D('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii', 5)
 
-    convert.Get2DNoThreats()
-    # results[0].to_csv('waak.csv')
-    # print("saved csv file")
+    # convert = Convert2DGPU('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', './pupillabs/panorama.png', 'pupillabs')
+    convert = Convert2DGPU('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii')
+
+    results = convert.Get2D()
+    print("\nProcessing done...")
+
+
+    print(results.head())
+
+    df = results.loc[~(results[['X', 'Y']]==0).all(axis=1)]
+    print(len(df) / len(results))
+
+    results.to_csv('gpuwaak.csv')
