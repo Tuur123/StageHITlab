@@ -11,12 +11,11 @@ class HeatmapMaker:
 
     def __init__(self, data, video, tracker, threads=5, scaling=1, panorama_name=None, filter=7, panorama='create', gpu=False) -> None:
 
-
         if panorama: # panorama not None -> expect data from mobile eyetracker
 
             if panorama == 'create':
                 print("Creating panorama. This can take a while...\n")
-                panorama_maker = Panorama(video, panorama_name, (self.world_width // scaling, self.world_height // scaling))
+                panorama_maker = Panorama(video, panorama_name, scaling)
                 self.world_panorama = panorama_maker.Create_Panorama()
             else:
                 self.world_panorama = cv2.imread(panorama)
@@ -54,9 +53,9 @@ class HeatmapMaker:
 
 if __name__ == "__main__":
 
-    # map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=False)
+    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
 
-    map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)
+    # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)
 
     heatmap, pan = map.make_heatmap()
     heatmap = cv2.addWeighted(pan, 1, heatmap, 1, 0)

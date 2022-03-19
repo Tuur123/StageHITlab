@@ -4,23 +4,25 @@ import shutil
 
 class Panorama:
 
-    def __init__(self, video, name, size):
+    def __init__(self, video, name, scaling):
 
         self.name = name
         self.folder = "frames/"
-        # if os.path.isdir(self.folder):
-        #     shutil.rmtree(self.folder)
-        # os.mkdir(self.folder)
+        if os.path.isdir(self.folder):
+            shutil.rmtree(self.folder)
+        os.mkdir(self.folder)
 
         # open vidcap
         self.cap = cv2.VideoCapture(video) # your video here
-        self.size = size
+        self.scaling = scaling
+        self.world_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.world_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     
     def Create_Panorama(self):
         self.Decimate()
         pan = self.Stitch()
 
-        if pan:
+        if pan is not None:
             return pan
 
     def Decimate(self):
@@ -37,7 +39,7 @@ class Panorama:
         # store the first frame
         _, last = self.cap.read()
         last = self.__rescale(last)
-        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, self.size))
+        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, (self.world_width // self.scaling, self.world_height // self.scaling)))
 
         # get the first frame's stuff
         kp1, des1 = orb.detectAndCompute(last, None)
@@ -77,14 +79,14 @@ class Panorama:
                 last = frame
                 kp1 = kp2
                 des1 = des2
-                cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, self.size))
+                cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, (self.world_width // self.scaling, self.world_height // self.scaling)))
                 print("\rSaved " + str(counter) + " frames", end='', flush=True)
 
             prev = frame
 
         # also save last frame
         counter += 1
-        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(prev, self.size))
+        cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(prev, (self.world_width // self.scaling, self.world_height // self.scaling)))
         
         self.cap.release()
     
@@ -120,6 +122,6 @@ class Panorama:
 
 
 if __name__ == "__main__":
-    pan = Panorama('waak/waak.mp4', 'waak/waak_panorama.png', (256, 256))
+    pan = Panorama('waak/waak.mp4', 'waak/waak_panorama.png', 1)
 
-    stiched = pan.Stitch()
+    stiched = pan.Create_Panorama()

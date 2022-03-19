@@ -71,16 +71,15 @@ class Convert2DGPU(DataHandler):
         else:
             self.world_panorama = panorama
 
-
         # Initiate matcher
-        self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_HAMMING)
+        self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)
         self.MIN_MATCH_COUNT = 4
 
         # panorama stream
         pan_stream = cv2.cuda_Stream()
 
         # Initiate ORB detector
-        self.orb = cuda.ORB_create(nfeatures=50000, scoreType=cv2.ORB_HARRIS_SCORE, blurForDescriptor=True)
+        self.surf = cv2.cuda.SURF_CUDA_create(300, _nOctaveLayers=2)
 
         # Load the image onto the GPU
         cuMat = cv2.cuda_GpuMat()
@@ -90,10 +89,10 @@ class Convert2DGPU(DataHandler):
         cuMat = cv2.cuda.cvtColor(cuMat, cv2.COLOR_BGR2GRAY, stream=pan_stream)
 
         # Create the CUDA ORB detector and detect keypoints/descriptors
-        kp2, self.des2 = self.orb.detectAndComputeAsync(cuMat, None, stream=pan_stream)
+        kp2, self.des2 = self.surf.detectWithDescriptors(cuMat, None)
 
         # Download the keypoints from the GPU memory
-        self.kp2 = self.orb.convert(kp2)
+        self.kp2 = cv2.cuda_SURF_CUDA.downloadKeypoints(self.surf, kp2)
         pan_stream.waitForCompletion()
 
         self.frame_idx = 0
@@ -131,6 +130,9 @@ class Convert2DGPU(DataHandler):
 
         data = data.astype({'X': int, 'Y': int})
         
+        df = data.loc[~(data[['X', 'Y']]==0).all(axis=1)]
+        print(len(df) / len(data))
+
         return data
 
     def QueueFiller(self):
@@ -155,7 +157,7 @@ class Convert2DGPU(DataHandler):
 
         while not self.queue.qsize() == 0 and self.updating:
             print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='', flush=True)
-        print()
+        print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='\n', flush=True)
         
     def Convert(self):
 
@@ -174,13 +176,13 @@ class Convert2DGPU(DataHandler):
             cuMatFrame = cv2.cuda.cvtColor(cuMatFrame, cv2.COLOR_BGR2GRAY, stream=frame_stream)
 
             # Detect keypoints/descriptors                
-            kp1, des1 = self.orb.detectAndComputeAsync(cuMatFrame, None, stream=frame_stream)
-
+            kp1, des1 = self.surf.detectWithDescriptors(cuMatFrame, None)
             gpu_matches = self.matcher.knnMatchAsync(des1, self.des2, k=2, stream=frame_stream)
-            frame_stream.waitForCompletion()
 
             # Download the keypoints and matches from GPU memory
-            kp1 = self.orb.convert(kp1)
+            kp1 = cv2.cuda_SURF_CUDA.downloadKeypoints(self.surf, kp1)
+            frame_stream.waitForCompletion()
+
             matches = self.matcher.knnMatchConvert(gpu_matches)
 
             # store all the good matches as per Lowe's ratio test.
