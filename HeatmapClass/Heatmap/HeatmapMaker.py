@@ -5,11 +5,12 @@ from ConverterGPU import Convert2DGPU
 from Panorama import Panorama
 from scipy.ndimage import gaussian_filter
 
+import time
 import matplotlib.pyplot as plt
 
 class HeatmapMaker:
 
-    def __init__(self, data, video, tracker, threads=5, scaling=1, panorama_name=None, filter=7, panorama='create', gpu=False) -> None:
+    def __init__(self, data, video, tracker, threads=4, scaling=1, panorama_name=None, filter=7, panorama='create', gpu=False) -> None:
 
         if panorama: # panorama not None -> expect data from mobile eyetracker
 
@@ -51,14 +52,35 @@ class HeatmapMaker:
 
 
 
+def timeit():
+
+    start = time.time()
+    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=False)
+    heatmap, pan = map.make_heatmap()
+
+    cpu_time = time.time() - start
+
+    print(f"CPU Time: {cpu_time}")
+
+    start = time.time()
+    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
+    heatmap, pan = map.make_heatmap()
+
+    gpu_time = time.time() - start
+
+    print(f"GPU Time: {gpu_time}")
+
+
 if __name__ == "__main__":
 
-    map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
+    # map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
 
-    # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)
+    # # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)
 
-    heatmap, pan = map.make_heatmap()
-    heatmap = cv2.addWeighted(pan, 1, heatmap, 1, 0)
+    # heatmap, pan = map.make_heatmap()
+    # heatmap = cv2.addWeighted(pan, 1, heatmap, 1, 0)
     
-    plt.imshow(heatmap)
-    plt.show()
+    # plt.imshow(heatmap)
+    # plt.show()
+
+    timeit()

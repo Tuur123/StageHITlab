@@ -100,17 +100,6 @@ class Convert2DGPU(DataHandler):
         self.updating = True
         self.results = []
     
-    def Get2DNoThreats(self):
-
-        fill_thread = threading.Thread(target=self.QueueFiller)
-        fill_thread.start()
-
-        update_thread = threading.Thread(target=self.UpdateUI)
-        update_thread.setDaemon(True)
-        update_thread.start()
-
-        return self.Convert()
-
     def Get2D(self):
 
         fill_thread = threading.Thread(target=self.QueueFiller)
