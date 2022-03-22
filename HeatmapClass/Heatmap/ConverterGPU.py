@@ -5,59 +5,7 @@ import numpy as np
 import pandas as pd
 from queue import Queue
 
-from sklearn.preprocessing import MinMaxScaler
-
-
-class DataHandler:
-    
-    def __init__(self, data_file, video, tracker) -> None:
-
-        self.vidcap = cv2.VideoCapture(video)
-        self.video_fps = self.vidcap.get(cv2.CAP_PROP_FPS)
-        self.total_frames = int(self.vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.world_height = int(self.vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.world_width = int(self.vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.frame_time = (1 / self.video_fps) * 1000 # milliseconden
-
-        if tracker == 'pupillabs':
-
-            df = pd.read_csv(data_file)
-            df['X'] = df['norm_pos_x'] * self.world_width
-            df['Y'] = self.world_height - df['norm_pos_y'] * self.world_height
-            df = df[['world_index', 'X', 'Y']]
-
-            self.data= df.astype({'world_index': int, 'X': int, 'Y': int})
-
-        if tracker == 'tobii':
-
-            df = pd.read_csv(data_file, sep='\t')
-
-            df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y']]
-
-            if df['Recording timestamp'][0] != 0: # we need to make sure timestamps start at 0
-                df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0]) / 1000
-
-            df = df.loc[~(df[['Gaze point X', 'Gaze point Y']]==0).all(axis=1)]
-
-            data = pd.DataFrame(columns=['world_index', 'Gaze point X', 'Gaze point Y'])
-
-            # convert timestamps into frame indeces
-            for frame_idx in range(self.total_frames):
-                
-                window_start = 0
-                window_end = self.frame_time * frame_idx + self.frame_time
-
-                tmp = df.loc[(df['Recording timestamp'] >= window_start) & (df['Recording timestamp'] < window_end)].mean()
-                tmp['world_index'] = frame_idx
-
-                data.loc[frame_idx] = tmp
-
-                window_start = window_end
-
-            data['X'] = np.array(data['Gaze point X'].values).astype(np.uint16)
-            data['Y'] = np.array(data['Gaze point Y'].values).astype(np.uint16)
-            data['world_index'] = np.array(data['world_index'].values).astype(np.uint16)
-            self.data = data[['world_index', 'X', 'Y']]
+from Datahandler import DataHandler
 
 
 class Convert2DGPU(DataHandler):
@@ -73,7 +21,7 @@ class Convert2DGPU(DataHandler):
 
         # Initiate matcher
         self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)
-        self.MIN_MATCH_COUNT = 4
+        self.MIN_MATCH_COUNT = 50
 
         # panorama stream
         pan_stream = cv2.cuda_Stream()
@@ -115,12 +63,9 @@ class Convert2DGPU(DataHandler):
         self.updating = False
 
         data = pd.DataFrame(results, columns=['world_index', 'X', 'Y'])
-        data = data.fillna(0)
+        data = data.dropna()
 
-        data = data.astype({'X': int, 'Y': int})
         
-        df = data.loc[~(data[['X', 'Y']]==0).all(axis=1)]
-        print(len(df) / len(data))
 
         return data
 
@@ -131,8 +76,8 @@ class Convert2DGPU(DataHandler):
 
         while success:
 
-            _, x, y = self.data.loc[(self.data['world_index'] == self.frame_idx)].mean()
-            self.queue.put([self.frame_idx, frame, x, y])
+            data = self.data.loc[(self.data['world_index'] == self.frame_idx)].to_numpy()
+            self.queue.put([self.frame_idx, frame, data])
 
             success, frame = self.vidcap.read()
             self.frame_idx += 1
@@ -155,7 +100,7 @@ class Convert2DGPU(DataHandler):
 
         while not self.queue.qsize() == 0:
 
-            frame_idx, frame, x, y = self.queue.get()
+            frame_idx, frame, data = self.queue.get()
 
             # Load the image onto the GPU
             cuMatFrame = cv2.cuda_GpuMat()
@@ -177,7 +122,7 @@ class Convert2DGPU(DataHandler):
             # store all the good matches as per Lowe's ratio test.
             good = []
             for m, n in matches:
-                if m.distance < 0.7 * n.distance:
+                if m.distance < 0.75 * n.distance:
                     good.append(m)
 
             if len(good) > self.MIN_MATCH_COUNT:
@@ -188,10 +133,14 @@ class Convert2DGPU(DataHandler):
                 M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
                 if M is not None:
-                    pan_x, pan_y = cv2.perspectiveTransform(np.float32([[x, y]]).reshape(-1,1,2), M)[0][0]
 
-                    results.append([frame_idx, pan_x, pan_y])
+                    for points in data:
+                        pan_x, pan_y = cv2.perspectiveTransform(np.float32([[points[1], points[2]]]).reshape(-1,1,2), M)[0][0]
+                        results.append([frame_idx, int(pan_x), int(pan_y)])
 
+                    # pan_x, pan_y = cv2.perspectiveTransform(np.float32([[data[0][1], data[0][2]]]).reshape(-1,1,2), M)[0][0]
+                    # results.append([frame_idx, int(pan_x), int(pan_y)])
+        
                 else:
                     results.append([frame_idx, None, None])
             else:
@@ -210,8 +159,5 @@ if __name__ == "__main__":
 
 
     print(results.head())
-
-    df = results.loc[~(results[['X', 'Y']]==0).all(axis=1)]
-    print(len(df) / len(results))
 
     results.to_csv('gpuwaak.csv')

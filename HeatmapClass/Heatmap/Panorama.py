@@ -64,23 +64,24 @@ class Panorama:
             try:
                 # match
                 matches = bf.knnMatch(des1, des2, k=2)
+
+                # lowe's ratio
+                good = []
+                for m, n in matches:
+                    if m.distance < 0.5 * n.distance:
+                        good.append(m)
+
+                if len(good) < cutoff:
+                    # swap and save
+                    counter += 1
+                    last = frame
+                    kp1 = kp2
+                    des1 = des2
+                    cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, (self.world_width // self.scaling, self.world_height // self.scaling)))
+                    print("\rSaved " + str(counter) + " frames", end='', flush=True)
             except:
                 continue
-            
-            # lowe's ratio
-            good = []
-            for m, n in matches:
-                if m.distance < 0.5 * n.distance:
-                    good.append(m)
-
-            if len(good) < cutoff:
-                # swap and save
-                counter += 1
-                last = frame
-                kp1 = kp2
-                des1 = des2
-                cv2.imwrite(self.folder + str(counter).zfill(5) + ".png", cv2.resize(last, (self.world_width // self.scaling, self.world_height // self.scaling)))
-                print("\rSaved " + str(counter) + " frames", end='', flush=True)
+        
 
             prev = frame
 

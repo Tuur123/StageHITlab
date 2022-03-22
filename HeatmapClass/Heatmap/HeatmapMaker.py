@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 from Converter import Convert2D
 from ConverterGPU import Convert2DGPU
 from Panorama import Panorama
@@ -10,7 +11,7 @@ import matplotlib.pyplot as plt
 
 class HeatmapMaker:
 
-    def __init__(self, data, video, tracker, threads=4, scaling=1, panorama_name=None, filter=7, panorama='create', gpu=False) -> None:
+    def __init__(self, data=None, video=None, tracker='tobii', export=None, threads=4, scaling=1, panorama_name=None, filter=7, panorama='create', gpu=True) -> None:
 
         if panorama: # panorama not None -> expect data from mobile eyetracker
 
@@ -23,13 +24,20 @@ class HeatmapMaker:
 
             self.pan_height, self.pan_width, _ = self.world_panorama.shape
             self.filter = filter
+            
+            if export is None: # create data export
 
-            if gpu:
-                self.converter = Convert2DGPU(data, video, self.world_panorama, tracker)
+                if gpu:
+                    self.converter = Convert2DGPU(data, video, self.world_panorama, tracker)
+                else:
+                    self.converter = Convert2D(data, video, self.world_panorama, tracker, threads)
+
+                self.data = self.converter.Get2D()
+
+                print(f"mean: {self.data['X'].mean()} {self.data['Y'].mean()}, std: {self.data['X'].std()} {self.data['Y'].std()}")
+
             else:
-                self.converter = Convert2D(data, video, self.world_panorama, tracker, threads)
-
-            self.data = self.converter.Get2D()
+                self.data = pd.read_csv(export)
 
             self.x_min = self.data['X'].min()
             self.x_max = self.data['X'].max()
@@ -39,7 +47,7 @@ class HeatmapMaker:
 
     def make_heatmap(self):
 
-        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_width, self.pan_height), range=[[self.x_min, self.x_max], [self.y_min, self.y_max]])
+        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_width, self.pan_height), range=[[0, self.pan_width], [0, self.pan_height]])
         heatmap *= 255
         heatmap = heatmap.astype(np.uint8).T
         heatmap = gaussian_filter(heatmap, self.filter)
@@ -47,6 +55,7 @@ class HeatmapMaker:
  
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HSV)
         heatmap[np.where((heatmap==heatmap[heatmap.shape[0]-1]).all(axis=2))] = [0, 0, 0]
+        heatmap[np.where((heatmap==[0, 0, 255]).all(axis=2))] = [0, 0, 0]
 
         return heatmap, cv2.resize(self.world_panorama, (heatmap.shape[1], heatmap.shape[0]))
 
@@ -73,14 +82,31 @@ def timeit():
 
 if __name__ == "__main__":
 
-    # map = HeatmapMaker('./waak/data.tsv', './waak/waak.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
 
-    # # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)
+    # map = HeatmapMaker(export='./waak/gpuwaak.csv', panorama='./waak/waak_panorama.png')
+    # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=False)     
 
     # heatmap, pan = map.make_heatmap()
-    # heatmap = cv2.addWeighted(pan, 1, heatmap, 1, 0)
-    
-    # plt.imshow(heatmap)
+    # heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
+    # plt.imshow(heat)
     # plt.show()
 
-    timeit()
+    # cv2.imwrite(f"test.png", heat)
+
+
+    map = HeatmapMaker('./waak/data.tsv', './waak/video.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=10, gpu=True)     
+
+    heatmap, pan = map.make_heatmap()
+    heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
+    cv2.imwrite(f"test.png", heat)
+
+    # for i in range(10):
+
+    #     map = HeatmapMaker('./waak/data.tsv', './waak/world.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)     
+
+    #     heatmap, pan = map.make_heatmap()
+    #     heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
+    #     cv2.imwrite(f"{i}.png", heat)
+
+
+    # timeit()
