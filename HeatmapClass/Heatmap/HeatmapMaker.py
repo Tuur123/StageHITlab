@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
 
     # map = HeatmapMaker(export='./waak/gpuwaak.csv', panorama='./waak/waak_panorama.png')
-    # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=False)     
+    # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)     
 
     # heatmap, pan = map.make_heatmap()
     # heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
@@ -94,8 +94,7 @@ if __name__ == "__main__":
     # cv2.imwrite(f"test.png", heat)
 
 
-    map = HeatmapMaker('./waak/data.tsv', './waak/video.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=10, gpu=True)     
-
+    map = HeatmapMaker('./waak/data.tsv', './waak/video.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)     
     heatmap, pan = map.make_heatmap()
     heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
     cv2.imwrite(f"test.png", heat)
