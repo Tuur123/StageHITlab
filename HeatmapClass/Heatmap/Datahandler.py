@@ -29,7 +29,11 @@ class DataHandler:
             df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y']]
 
             if df['Recording timestamp'][0] != 0: # we need to make sure timestamps start at 0
-                df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0]) / 1000
+                df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0])
+
+            # timestamp in microseconds: / 1000
+
+            df['Recording timestamp'] = df['Recording timestamp'] / 1000
 
 
             df['world_index'] = None

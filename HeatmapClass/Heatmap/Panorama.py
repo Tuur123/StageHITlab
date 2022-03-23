@@ -45,7 +45,8 @@ class Panorama:
         kp1, des1 = orb.detectAndCompute(last, None)
 
         # cutoff, the minimum number of keypoints
-        cutoff = 5
+        cutoff = 10
+
         # count number of frames
         prev = None
         while True:
@@ -68,10 +69,10 @@ class Panorama:
                 # lowe's ratio
                 good = []
                 for m, n in matches:
-                    if m.distance < 0.5 * n.distance:
+                    if m.distance < 0.7 * n.distance:
                         good.append(m)
 
-                if len(good) < cutoff:
+                if len(good) > cutoff:
                     # swap and save
                     counter += 1
                     last = frame

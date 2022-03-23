@@ -83,21 +83,19 @@ def timeit():
 if __name__ == "__main__":
 
 
-    # map = HeatmapMaker(export='./waak/gpuwaak.csv', panorama='./waak/waak_panorama.png')
+    map = HeatmapMaker(export='gpuwaak.csv', panorama='./waak/waak_panorama.png', filter=15)
+
     # map = HeatmapMaker('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', 'pupillabs', panorama='./pupillabs/panorama.png', filter=7, gpu=True)     
-
-    # heatmap, pan = map.make_heatmap()
-    # heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
-    # plt.imshow(heat)
-    # plt.show()
-
-    # cv2.imwrite(f"test.png", heat)
-
-
-    map = HeatmapMaker('./waak/data.tsv', './waak/video.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)     
     heatmap, pan = map.make_heatmap()
     heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
-    cv2.imwrite(f"test.png", heat)
+    cv2.imwrite(f"filter15.png", heat)
+    # map.data.to_csv('gpuwaak.csv')
+
+    # map = HeatmapMaker('./waak/data.tsv', './waak/video.mp4', 'tobii', panorama='./waak/waak_panorama.png', filter=7, gpu=True)
+    # heatmap, pan = map.make_heatmap()
+    # heat = cv2.addWeighted(pan, 1, heatmap, 1, 0)
+    # cv2.imwrite(f"test.png", heat)
+    # map.data.to_csv('gpuwaak.csv')
 
     # for i in range(10):
 

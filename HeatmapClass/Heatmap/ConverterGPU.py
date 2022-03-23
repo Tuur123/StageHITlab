@@ -21,7 +21,7 @@ class Convert2DGPU(DataHandler):
 
         # Initiate matcher
         self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)
-        self.MIN_MATCH_COUNT = 50
+        self.MIN_MATCH_COUNT = 10
 
         # panorama stream
         pan_stream = cv2.cuda_Stream()
@@ -64,8 +64,6 @@ class Convert2DGPU(DataHandler):
 
         data = pd.DataFrame(results, columns=['world_index', 'X', 'Y'])
         data = data.dropna()
-
-        
 
         return data
 
@@ -122,7 +120,7 @@ class Convert2DGPU(DataHandler):
             # store all the good matches as per Lowe's ratio test.
             good = []
             for m, n in matches:
-                if m.distance < 0.75 * n.distance:
+                if m.distance < 0.7 * n.distance:
                     good.append(m)
 
             if len(good) > self.MIN_MATCH_COUNT:
