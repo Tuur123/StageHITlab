@@ -135,8 +135,7 @@ class Convert2D(DataHandler):
             print(f"         ", end='\r')
         self.vidcap.release()
     
-    def UpdateUI(self):
-        
+    def UpdateUI(self):        
         while self.queue.empty():
             pass # wait for q to fill up
 

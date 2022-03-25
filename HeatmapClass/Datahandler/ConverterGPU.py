@@ -1,23 +1,17 @@
 import threading
 import cv2
-from cv2 import cuda
 import numpy as np
 import pandas as pd
 from queue import Queue
 
-from Datahandler import DataHandler
 
+class Convert2DGPU:
 
-class Convert2DGPU(DataHandler):
+    def __init__(self, data, panorama, vidcap):
 
-    def __init__(self, data, video, panorama, tracker):
-
-        super().__init__(data, video, tracker)
-
-        if type(panorama) == str:
-            self.world_panorama = cv2.imread(panorama)
-        else:
-            self.world_panorama = panorama
+        self.data = data
+        self.vidcap = vidcap
+        self.world_panorama = panorama
 
         # Initiate matcher
         self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)

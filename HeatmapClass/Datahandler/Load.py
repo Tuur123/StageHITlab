@@ -1,10 +1,14 @@
 import cv2
+from matplotlib.pyplot import sca
 import pandas as pd
 import numpy as np
 
-class DataHandler:
+from Datahandler.Panorama import Panorama
+from Datahandler.ConverterGPU import Convert2DGPU
+
+class Loader:
     
-    def __init__(self, data_file, video, tracker) -> None:
+    def __init__(self, data_file, video, tracker, panorama='create', export=None, scaling=1) -> None:
 
         self.vidcap = cv2.VideoCapture(video)
         self.video_fps = self.vidcap.get(cv2.CAP_PROP_FPS)
@@ -13,18 +17,27 @@ class DataHandler:
         self.world_width = int(self.vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_time = (1 / self.video_fps) * 1000 # milliseconden
 
-        if tracker == 'pupillabs':
+        self.data_file = data_file
+        self.tracker = tracker
+        self.panorama = panorama
+        self.export = export
+        self.scaling = scaling
 
-            df = pd.read_csv(data_file)
+
+    def load(self):
+
+        if self.tracker == 'pupillabs':
+
+            df = pd.read_csv(self.data_file)
             df['X'] = df['norm_pos_x'] * self.world_width
             df['Y'] = self.world_height - df['norm_pos_y'] * self.world_height
             df = df[['world_index', 'X', 'Y']]
 
             self.data= df.astype({'world_index': int, 'X': int, 'Y': int})
 
-        if tracker == 'tobii':
+        if self.tracker == 'tobii':
 
-            df = pd.read_csv(data_file, sep='\t')
+            df = pd.read_csv(self.data_file, sep='\t')
 
             df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y']]
 
@@ -32,7 +45,6 @@ class DataHandler:
                 df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0])
 
             # timestamp in microseconds: / 1000
-
             df['Recording timestamp'] = df['Recording timestamp'] / 1000
 
 
@@ -56,9 +68,21 @@ class DataHandler:
             self.data = df[['world_index', 'X', 'Y']]
             self.data = self.data.loc[~(self.data[['X', 'Y']]==0).all(axis=1)]
 
+        if self.panorama: # panorama not None -> expect data from mobile eyetracker
 
 
+            self.world_panorama = cv2.imread(self.panorama)
 
-if __name__ == "__main__":
-    handler = DataHandler('../waak/data.tsv', '../waak/waak.mp4', 'tobii')
-    print(handler.data.head(100))
+            self.pan_height, self.pan_width, _ = self.world_panorama.shape
+            
+            if self.export is None: # create data export
+
+                self.converter = Convert2DGPU(self.data, self.world_panorama, self.vidcap)
+                self.data = self.converter.Get2D()
+
+            else:
+                self.data = pd.read_csv(self.export)
+
+            print(f"mean: {self.data['X'].mean()} {self.data['Y'].mean()}, std: {self.data['X'].std()} {self.data['Y'].std()}")
+
+            return self.data, True
