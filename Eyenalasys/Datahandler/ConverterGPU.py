@@ -47,9 +47,6 @@ class Convert2DGPU:
         fill_thread = threading.Thread(target=self.QueueFiller)
         fill_thread.start()
 
-        update_thread = threading.Thread(target=self.UpdateUI)
-        update_thread.start()
-
         while self.queue.qsize() < (self.queue.maxsize // 4): # wait for queue to fill up
             pass
 
@@ -64,27 +61,18 @@ class Convert2DGPU:
     def QueueFiller(self):
 
         success, frame = self.vidcap.read()
-        self.frame_idx = 0
+        frame_idx = 0
 
         while success:
 
-            data = self.data.loc[(self.data['world_index'] == self.frame_idx)].to_numpy()
-            self.queue.put([self.frame_idx, frame, data])
+            data = self.data.loc[(self.data['world_index'] == frame_idx)].to_numpy()
+            self.queue.put([frame_idx, frame, data])
 
             success, frame = self.vidcap.read()
-            self.frame_idx += 1
+            frame_idx += 1
 
         self.vidcap.release()
-    
-    def UpdateUI(self):
-        
-        while self.queue.empty():
-            pass # wait for q to fill up
-
-        while not self.queue.qsize() == 0 and self.updating:
-            print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='', flush=True)
-        print(f"\rQueue size: {self.queue.qsize()}     Read {round((self.frame_idx / self.total_frames) * 100)}% of frames ", end='\n', flush=True)
-        
+            
     def Convert(self):
 
         frame_stream = cv2.cuda_Stream()
@@ -92,7 +80,7 @@ class Convert2DGPU:
 
         while not self.queue.qsize() == 0:
 
-            frame_idx, frame, data = self.queue.get()
+            self.frame_idx, frame, data = self.queue.get()
 
             # Load the image onto the GPU
             cuMatFrame = cv2.cuda_GpuMat()
@@ -128,15 +116,15 @@ class Convert2DGPU:
 
                     for points in data:
                         pan_x, pan_y = cv2.perspectiveTransform(np.float32([[points[1], points[2]]]).reshape(-1,1,2), M)[0][0]
-                        results.append([frame_idx, int(pan_x), int(pan_y)])
+                        results.append([self.frame_idx, int(pan_x), int(pan_y)])
 
                     # pan_x, pan_y = cv2.perspectiveTransform(np.float32([[data[0][1], data[0][2]]]).reshape(-1,1,2), M)[0][0]
                     # results.append([frame_idx, int(pan_x), int(pan_y)])
         
                 else:
-                    results.append([frame_idx, None, None])
+                    results.append([self.frame_idx, None, None])
             else:
-                results.append([frame_idx, None, None])
+                results.append([self.frame_idx, None, None])
 
         return results
 

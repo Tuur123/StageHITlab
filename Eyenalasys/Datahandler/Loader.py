@@ -1,14 +1,13 @@
 import cv2
-from matplotlib.pyplot import sca
 import pandas as pd
 import numpy as np
+import threading
 
-from Datahandler.Panorama import Panorama
-from Datahandler.ConverterGPU import Convert2DGPU
+from ConverterGPU import Convert2DGPU
 
 class Loader:
     
-    def __init__(self, data_file, video, tracker, panorama='create', export=None, scaling=1) -> None:
+    def __init__(self, data_file, video, tracker, panorama=None, export=None, scaling=1) -> None:
 
         self.vidcap = cv2.VideoCapture(video)
         self.video_fps = self.vidcap.get(cv2.CAP_PROP_FPS)
@@ -23,8 +22,27 @@ class Loader:
         self.export = export
         self.scaling = scaling
 
+        self.__data = None
 
-    def load(self):
+        if panorama:
+            self.world_panorama = cv2.imread(self.panorama)
+            self.pan_height, self.pan_width, _ = self.world_panorama.shape
+            self.converter = Convert2DGPU(self.data, self.panorama, self.vidcap)
+
+        self.load_thread = threading.Thread(target=self.__load)
+        self.load_thread.start()
+
+
+    @property
+    def data(self):
+        return self.__data
+
+    @data.setter
+    def data(self, new):
+        self.__data = new
+
+
+    def __load(self):
 
         if self.tracker == 'pupillabs':
 
@@ -33,7 +51,7 @@ class Loader:
             df['Y'] = self.world_height - df['norm_pos_y'] * self.world_height
             df = df[['world_index', 'X', 'Y']]
 
-            self.data= df.astype({'world_index': int, 'X': int, 'Y': int})
+            data= df.astype({'world_index': int, 'X': int, 'Y': int})
 
         if self.tracker == 'tobii':
 
@@ -65,24 +83,17 @@ class Loader:
             df['Y'] = np.array(df['Gaze point Y'].values).astype(np.uint16)
 
             # df['world_index'] = np.array(df['world_index'].values).astype(np.uint16)
-            self.data = df[['world_index', 'X', 'Y']]
-            self.data = self.data.loc[~(self.data[['X', 'Y']]==0).all(axis=1)]
+            data = df[['world_index', 'X', 'Y']]
+            data = self.data.loc[~(self.data[['X', 'Y']]==0).all(axis=1)]
 
         if self.panorama: # panorama not None -> expect data from mobile eyetracker
-
-
-            self.world_panorama = cv2.imread(self.panorama)
-
-            self.pan_height, self.pan_width, _ = self.world_panorama.shape
             
-            if self.export is None: # create data export
+            data = self.converter.Get2D()
 
-                self.converter = Convert2DGPU(self.data, self.world_panorama, self.vidcap)
-                self.data = self.converter.Get2D()
+            if self.export: # create data export
 
-            else:
-                self.data = pd.read_csv(self.export)
+                data = pd.read_csv(self.export)
 
-            print(f"mean: {self.data['X'].mean()} {self.data['Y'].mean()}, std: {self.data['X'].std()} {self.data['Y'].std()}")
+            print(f"mean: {data['X'].mean()} {data['Y'].mean()}, std: {data['X'].std()} {data['Y'].std()}")
 
-            return self.data, True
+        self.data = data
