@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import threading
 
-from ConverterGPU import Convert2DGPU
+from Datahandler.ConverterGPU import Convert2DGPU
 
 class Loader:
     
@@ -27,7 +27,9 @@ class Loader:
         if panorama:
             self.world_panorama = cv2.imread(self.panorama)
             self.pan_height, self.pan_width, _ = self.world_panorama.shape
-            self.converter = Convert2DGPU(self.data, self.panorama, self.vidcap)
+
+            self.data = pd.read_csv(data_file)
+            self.converter = Convert2DGPU(self.data, self.world_panorama, self.vidcap)
 
         self.load_thread = threading.Thread(target=self.__load)
         self.load_thread.start()

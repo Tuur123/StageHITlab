@@ -1,5 +1,5 @@
-import os
 import json
+import pandas as pd
 
 import tkinter as tk
 from tkinter import *
@@ -7,8 +7,8 @@ from tkinter import ttk
 from tkinter import messagebox, filedialog
 from PIL import ImageTk, Image
 
-from Export import Export
-from CreateProject import CreateProject
+from GUI.Export import Export
+from GUI.CreateProject import CreateProject
 
 
 class MainWindow(tk.Tk):
@@ -64,6 +64,8 @@ class MainWindow(tk.Tk):
         file = filedialog.askopenfilename()
         file_handle = open(file)
         self.values = json.load(file_handle)
+        print(self.values)
+        self.dataset = pd.read_csv(self.values['export'])
 
         self.create_image()
 

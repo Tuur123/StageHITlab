@@ -132,7 +132,7 @@ class Convert2DGPU:
 if __name__ == "__main__":
 
     # convert = Convert2DGPU('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', './pupillabs/panorama.png', 'pupillabs')
-    convert = Convert2DGPU('./waak/data.tsv', './waak/waak.mp4', './waak/waak_panorama.png', 'tobii')
+    convert = Convert2DGPU('./waak/data.tsv', './waak/waak_panorama.png', './waak/video.mp4')
 
     results = convert.Get2D()
     print("\nProcessing done...")

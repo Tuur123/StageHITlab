@@ -1,14 +1,9 @@
-import sys
-
-sys.path.insert(1, r'C:\Users\Arthur\Desktop\school\StageHITlab\Eyenalasys\Datahandler')
-
 import threading
 import tkinter as tk
 
 from tkinter import messagebox
 from tkinter.ttk import Progressbar
-
-from Loader import Loader
+from Datahandler.Loader import Loader
 
 class Export(tk.Tk):
 
