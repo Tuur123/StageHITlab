@@ -1,5 +1,5 @@
-import threading
 import cv2
+import threading
 import numpy as np
 import pandas as pd
 from queue import Queue
@@ -7,11 +7,12 @@ from queue import Queue
 
 class Convert2DGPU:
 
-    def __init__(self, data, panorama, vidcap):
+    def __init__(self, data, panorama, vidcap, message_q):
 
         self.data = data
         self.vidcap = vidcap
         self.world_panorama = panorama
+        self.total_frames = int(self.vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         # Initiate matcher
         self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)
@@ -41,6 +42,8 @@ class Convert2DGPU:
         self.queue = Queue(maxsize=200)
         self.updating = True
         self.results = []
+
+        self.message_q = message_q
     
     def Get2D(self):
 
@@ -123,21 +126,11 @@ class Convert2DGPU:
         
                 else:
                     results.append([self.frame_idx, None, None])
+
             else:
                 results.append([self.frame_idx, None, None])
+            
+            percent_done = round((self.frame_idx / self.total_frames) * 100)
+            self.message_q.put(percent_done)
 
         return results
-
-
-if __name__ == "__main__":
-
-    # convert = Convert2DGPU('./pupillabs/gaze_positions.csv', './pupillabs/world.mp4', './pupillabs/panorama.png', 'pupillabs')
-    convert = Convert2DGPU('./waak/data.tsv', './waak/waak_panorama.png', './waak/video.mp4')
-
-    results = convert.Get2D()
-    print("\nProcessing done...")
-
-
-    print(results.head())
-
-    results.to_csv('gpuwaak.csv')

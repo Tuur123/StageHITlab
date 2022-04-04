@@ -1,5 +1,5 @@
 import os
-import json
+import gc
 import tkinter as tk
 from tkinter import EW, E, filedialog
 from tkinter.messagebox import showinfo
@@ -32,6 +32,10 @@ class CreateProject(tk.Tk):
         self.pan_btn['command'] = self.get_panorama
         self.pan_btn.pack()
 
+        self.project_fodler_btn = tk.Button(self, text='Select project folder') 
+        self.project_fodler_btn['command'] = self.get_project_folder
+        self.project_fodler_btn.pack()
+
         self.export_btn = tk.Button(self, text='Create project')  
         self.export_btn['command'] = self.create
         self.export_btn.pack()
@@ -55,24 +59,34 @@ class CreateProject(tk.Tk):
         print(self.panorama_file)
         self.pan_btn['text'] = os.path.basename(self.panorama_file)
 
+    def get_project_folder(self):
+        self.project_folder = filedialog.askdirectory()
+        print(self.project_folder)
+        self.project_fodler_btn['text'] = os.path.basename(self.project_folder)
+
     def create(self):
         if self.data_file is None or self.video_file is None or self.panorama_file is None:
             showinfo("Error", "Please select valid files.")
             return None
 
         self.values = dict({
-
-            'video': self.video_file,
-            'data': self.data_file,
-            'panorama': self.panorama_file,
-            'tracker': self.tracker_combo.get()
-        })
+            'files': dict({
+                'video': self.video_file,
+                'data': self.data_file,
+                'panorama': self.panorama_file,
+                'export': 'export.csv'}),
+            'tracker': self.tracker_combo.get(),
+            'project': self.project_folder})
 
         self.destroy()
 
     
     def show(self):
         self.wait_window()
+        self.layout = None
+        self.window = None
+        self.tk = None
+        gc.collect()
         return self.values
 
 if __name__ == "__main__":

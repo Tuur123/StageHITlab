@@ -1,57 +1,65 @@
 import threading
-import tkinter as tk
+import gc
 
-from tkinter import messagebox
+import tkinter as tk
 from tkinter.ttk import Progressbar
+
+from queue import Queue
+
 from Datahandler.Loader import Loader
 
-class Export(tk.Tk):
 
-    def __init__(self, data_file, video, tracker, panorama=None, export='export.csv', scaling=1):
+class ExportInfo(tk.Toplevel):
+
+    def __init__(self, parameters):
         super().__init__()
         
         # window always on top
         self.attributes('-topmost', True)
 
-        # global vars
-        self.exported = None
-        self.loader = Loader(data_file, video, tracker, panorama, export)
-
         # progressbar
         self.progress_bar = Progressbar(self, orient='horizontal', mode='determinate')
         self.progress_bar.pack()
-        
-        # update thread
-        self.update_thread = threading.Thread(target=self.updateUI)
-        self.update_thread.start()
 
-    def progress(self, value):
-        if self.progress_bar['value'] < 100:
-            self.progress_bar['value'] = value
-            return False
-        else:
-            messagebox.showinfo(message='Done!')
-            return True
- 
-    def updateUI(self):
-        
-        while True:
+        # create message queue
+        self.message_q = Queue()
+
+        # vars
+        self.running = True
+        self.dataset = None
+        self.loader = Loader(parameters, self.message_q)
+
+        # message q thread
+        self.message_handler_thread = threading.Thread(target=self.message_handler, name="ExportWindowMessageHandler")
+        self.message_handler_thread.start()
+
+    def message_handler(self):
+        while self.running:
+
             try:
-                percent_done = (self.loader.converter.frame_idx // self.loader.total_frames) * 100
+                message = self.message_q.get()
+                
+                if message == 'Done':
+                    self.running = False
+                    self.dataset = self.message_q.get()
+                    self.destroy()
+                    break    
 
-                if self.progress(percent_done):
-                    self.exported = self.loader.data
+                else:
+                    self.progress_bar['value'] = message
 
             except Exception as e:
                 print(e)
+                break
 
-    def show(self):
+    def get_data(self):
         self.wait_window()
-        return self.exported
-
-
-
+        self.layout = None
+        self.window = None
+        self.tk = None
+        gc.collect()
+        return self.dataset
 
 if __name__ == "__main__":
-    app = Export()
+    app = ExportInfo()
     app.mainloop()
