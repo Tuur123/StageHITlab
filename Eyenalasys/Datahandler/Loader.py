@@ -21,7 +21,7 @@ class Loader:
         self.data_file = parameters['files']['data']
         self.tracker = parameters['tracker']
         self.panorama = parameters['files']['panorama']
-        self.export = parameters['project'] + parameters['files']['export']
+        self.export = parameters['project'] + '/' + parameters['files']['export']
 
         # messageq vars
         self.message_q = message_q
@@ -73,17 +73,16 @@ class Loader:
             df['X'] = np.array(df['Gaze point X'].values).astype(np.uint16)
             df['Y'] = np.array(df['Gaze point Y'].values).astype(np.uint16)
 
-            data = df[['world_index', 'X', 'Y']]
+            data = df[['world_index', 'X', 'Y', 'Eye movement type']]
             data = data.loc[~(data[['X', 'Y']]==0).all(axis=1)]
 
-        if self.panorama: # panorama not None -> expect data from mobile eyetracker
 
-            self.converter = Convert2DGPU(data, self.world_panorama, self.vidcap, self.message_q)
-            data = self.converter.Get2D()
+        self.converter = Convert2DGPU(data, self.world_panorama, self.vidcap, self.message_q)
+        data = self.converter.Get2D()
 
-            if self.export: # create data export
+        if self.export: # create data export
 
-                data.to_csv(self.export)
+            data.to_csv(self.export, index=False)
 
             print(f"mean: {data['X'].mean()} {data['Y'].mean()}, std: {data['X'].std()} {data['Y'].std()}")
 

@@ -1,0 +1,48 @@
+{
+    "files": {
+        "video": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/testproject\\world.mp4",
+        "data": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/testproject\\gaze_positions.csv",
+        "panorama": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/testproject\\panorama.png",
+        "export": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/testproject/export.csv"
+    },
+    "tracker": "pupillabs",
+    "project": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/testproject",
+    "AOIs": [
+        {
+            "name": "whiteboard",
+            "coords": [
+                132.0,
+                24.0,
+                411.0,
+                205.0
+            ]
+        },
+        {
+            "name": "pc scherm",
+            "coords": [
+                716.0,
+                238.0,
+                1056.0,
+                532.0
+            ]
+        },
+        {
+            "name": "stoel",
+            "coords": [
+                375.0,
+                223.0,
+                510.0,
+                377.0
+            ]
+        },
+        {
+            "name": "dozen",
+            "coords": [
+                527.0,
+                299.0,
+                711.0,
+                583.0
+            ]
+        }
+    ]
+}
