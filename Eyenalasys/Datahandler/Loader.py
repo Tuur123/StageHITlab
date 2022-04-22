@@ -50,7 +50,7 @@ class Loader:
 
             df = pd.read_csv(self.data_file, sep='\t')
 
-            df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y']]
+            df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y', 'Eye movement type']]
 
             if df['Recording timestamp'][0] != 0: # we need to make sure timestamps start at 0
                 df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0])
