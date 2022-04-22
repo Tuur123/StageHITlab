@@ -44,6 +44,8 @@ class Convert2DGPU:
         self.results = []
 
         self.message_q = message_q
+
+        print(self.data.head(50))
     
     def Get2D(self):
 

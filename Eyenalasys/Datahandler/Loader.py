@@ -1,3 +1,4 @@
+from lib2to3.pytree import convert
 import cv2
 import pandas as pd
 import numpy as np
@@ -66,27 +67,28 @@ class Loader:
                 window_end = self.frame_time * frame_idx + self.frame_time
 
                 indeces = df.index[(df['Recording timestamp'] >= window_start) & (df['Recording timestamp'] < window_end)]
-                df.iloc[indeces, [3]] = frame_idx
+                df.iloc[indeces, [4]] = frame_idx
 
                 window_start = window_end
 
             df['X'] = np.array(df['Gaze point X'].values).astype(np.uint16)
             df['Y'] = np.array(df['Gaze point Y'].values).astype(np.uint16)
 
-            data = df[['world_index', 'X', 'Y', 'Eye movement type']]
+            data = df[['world_index', 'X', 'Y']]
             data = data.loc[~(data[['X', 'Y']]==0).all(axis=1)]
 
 
         self.converter = Convert2DGPU(data, self.world_panorama, self.vidcap, self.message_q)
-        data = self.converter.Get2D()
+        converted_data = self.converter.Get2D()
+        
 
-        if self.export: # create data export
+        if self.export: # create converted_data export
 
-            data.to_csv(self.export, index=False)
+            converted_data.to_csv(self.export, index=False)
 
-            print(f"mean: {data['X'].mean()} {data['Y'].mean()}, std: {data['X'].std()} {data['Y'].std()}")
+            print(f"mean: {converted_data['X'].mean()} {converted_data['Y'].mean()}, std: {converted_data['X'].std()} {converted_data['Y'].std()}")
 
         self.running = False
 
         self.message_q.put('Done')
-        self.message_q.put(data)
+        self.message_q.put(converted_data)
