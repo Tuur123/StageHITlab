@@ -16,7 +16,7 @@ class Convert2DGPU:
 
         # Initiate matcher
         self.matcher = cv2.cuda.DescriptorMatcher_createBFMatcher(cv2.NORM_L2)
-        self.MIN_MATCH_COUNT = 10
+        self.MIN_MATCH_COUNT = 5
 
         # panorama stream
         pan_stream = cv2.cuda_Stream()
@@ -114,7 +114,7 @@ class Convert2DGPU:
         while not self.done or not self.match_queue.qsize() == 0:
  
             try:
-                # print(f"Frame Q size: {self.queue.qsize()}. Convert Q size: {self.match_queue.qsize()}")
+                print(f"Frame Q size: {self.queue.qsize()}. Convert Q size: {self.match_queue.qsize()}")
                 matches, kp1, data = self.match_queue.get_nowait()
             except Empty:
                 continue

@@ -103,6 +103,7 @@ class MainWindow(tk.Tk):
             else:
                 self.fill_treeview()
                 self.create_heatmap()
+                self.save()
                 
                 messagebox.showinfo("Export", "Succesfully created data!")          
 
@@ -125,7 +126,7 @@ class MainWindow(tk.Tk):
             id = self.canvas.create_rectangle(*aoi['coords'], outline='red', tags='all')
             close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags='all')
 
-            text_id = self.canvas.create_text(x, y, anchor=W, text=name, fill='red', tags='all')
+            text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags='all')
             self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
 
     def save(self):
@@ -220,7 +221,7 @@ class MainWindow(tk.Tk):
         self.update_image()
 
     def create_heatmap(self):
-        self.heatmap_maker = HeatmapMaker(self.values['files']['panorama'], data=self.dataset)
+        self.heatmap_maker = HeatmapMaker(self.values['files']['panorama'], data=self.dataset, filter=3)
         self.heatmap = Image.fromarray(self.heatmap_maker.make_heatmap())
         self.map_container = self.heatmap_canvas.create_image(0, 0, anchor=NW, image=ImageTk.PhotoImage(self.heatmap))
         self.update_heatmap()

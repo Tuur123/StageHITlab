@@ -19,15 +19,15 @@ class HeatmapMaker:
 
     def make_heatmap(self):
 
-        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_width, self.pan_height), range=[[0, self.pan_width], [0, self.pan_height]])
+        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_width, self.pan_height), range=[[0, self.pan_width], [0, self.pan_height / 2]])
         heatmap *= 255
         heatmap = heatmap.astype(np.uint8).T
         heatmap = gaussian_filter(heatmap, self.filter)
         heatmap = heatmap.astype(np.uint8)
  
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HSV)
-        # heatmap[np.where((heatmap==heatmap[heatmap.shape[0]-1]).all(axis=2))] = [0, 0, 0]
+        heatmap[np.where((heatmap==heatmap[heatmap.shape[0]-1]).all(axis=2))] = [0, 0, 0]
         heatmap[np.where((heatmap==[0, 0, 255]).all(axis=2))] = [0, 0, 0]
 
-        final = cv2.addWeighted(cv2.resize(self.world_panorama, (heatmap.shape[1], heatmap.shape[0])), 1, heatmap, 1, 1)
+        final = cv2.addWeighted(cv2.resize(self.world_panorama, (heatmap.shape[1], heatmap.shape[0])), 1, heatmap, 1, 0)
         return final
