@@ -22,7 +22,7 @@ class Loader:
         self.data_file = parameters['files']['data']
         self.tracker = parameters['tracker']
         self.panorama = parameters['files']['panorama']
-        self.export = parameters['project'] + '/' + parameters['files']['export']
+        self.export = parameters['files']['export']
 
         # messageq vars
         self.message_q = message_q

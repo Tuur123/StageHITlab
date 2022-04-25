@@ -2,7 +2,7 @@ import cv2
 import threading
 import numpy as np
 import pandas as pd
-from queue import Queue
+from queue import Empty, Queue
 
 
 class Convert2DGPU:
@@ -40,22 +40,24 @@ class Convert2DGPU:
 
         self.frame_idx = 0
         self.queue = Queue(maxsize=200)
+        self.match_queue = Queue(maxsize=500)
         self.updating = True
         self.results = []
-
+        self.done = False
         self.message_q = message_q
-
-        print(self.data.head(50))
     
     def Get2D(self):
 
-        fill_thread = threading.Thread(target=self.QueueFiller)
+        fill_thread = threading.Thread(target=self.QueueFiller, name="Frame Queue filler")
         fill_thread.start()
 
         while self.queue.qsize() < (self.queue.maxsize // 4): # wait for queue to fill up
             pass
 
-        results = self.Convert()
+        convert_thread = threading.Thread(target=self.Convert, name="Convert Thread")
+        convert_thread.start()
+
+        results = self.Matcher()
         self.updating = False
 
         data = pd.DataFrame(results, columns=['world_index', 'X', 'Y'])
@@ -81,7 +83,6 @@ class Convert2DGPU:
     def Convert(self):
 
         frame_stream = cv2.cuda_Stream()
-        results = []
 
         while not self.queue.qsize() == 0:
 
@@ -101,8 +102,22 @@ class Convert2DGPU:
             # Download the keypoints and matches from GPU memory
             kp1 = cv2.cuda_SURF_CUDA.downloadKeypoints(self.surf, kp1)
             frame_stream.waitForCompletion()
-
             matches = self.matcher.knnMatchConvert(gpu_matches)
+
+            self.match_queue.put((matches, kp1, data))
+
+        self.done = True
+
+    def Matcher(self):
+
+        results = []
+        while not self.done or not self.match_queue.qsize() == 0:
+ 
+            try:
+                # print(f"Frame Q size: {self.queue.qsize()}. Convert Q size: {self.match_queue.qsize()}")
+                matches, kp1, data = self.match_queue.get_nowait()
+            except Empty:
+                continue
 
             # store all the good matches as per Lowe's ratio test.
             good = []
