@@ -1,0 +1,11 @@
+{
+    "files": {
+        "video": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test\\world.mp4",
+        "data": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test\\gaze_positions.csv",
+        "panorama": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test\\panorama.png",
+        "export": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test/export.csv"
+    },
+    "tracker": "pupillabs",
+    "project": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test",
+    "AOIs": []
+}

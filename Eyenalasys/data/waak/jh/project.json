@@ -1,0 +1,11 @@
+{
+    "files": {
+        "video": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/waak/jh\\video.mp4",
+        "data": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/waak/jh\\data.tsv",
+        "panorama": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/waak/jh\\waak_panorama.png",
+        "export": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/waak/jh/export.csv"
+    },
+    "tracker": "tobii",
+    "project": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/waak/jh",
+    "AOIs": []
+}

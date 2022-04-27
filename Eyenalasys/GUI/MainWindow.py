@@ -1,6 +1,5 @@
 import json
 import math
-import time
 import shutil
 import pandas as pd
 import threading
@@ -36,9 +35,10 @@ class MainWindow(tk.Tk):
         # create menu
         menubar = Menu(self)
         file_menu = Menu(menubar, tearoff=0)
-        file_menu.add_command(label='New', command=self.new_project)       
-        file_menu.add_command(label='Open', command=self.open_project)
-        file_menu.add_command(label='Save', command=self.save)
+        file_menu.add_command(label='New', command=self.new_project, accelerator="Ctrl+N")       
+        file_menu.add_command(label='Open', command=self.open_project, accelerator="Ctrl+O")
+        file_menu.add_command(label='Save', command=self.save, accelerator="Ctrl+S")
+        file_menu.add_command(label='Close', command=self.quit, accelerator="Ctrl+Q")
 
         # add menu to menubar
         menubar.add_cascade(label='File', menu=file_menu)
@@ -53,6 +53,12 @@ class MainWindow(tk.Tk):
         tab_control.add(heatmap_tab, text='Heatmap')
         tab_control.add(data_tab, text='Data')
         tab_control.pack(fill='both', expand=True)
+
+        # create shortcut binds
+        self.bind('<Control-s>', self.save)
+        self.bind('<Control-n>', self.new_project)
+        self.bind('<Control-o>', self.open_project)
+        self.bind('<Control-q>', self.close)
 
         # create img container
         self.img = ImageTk.PhotoImage(file='./assets/placeholder.png')
@@ -76,11 +82,7 @@ class MainWindow(tk.Tk):
         self.treescrollx.pack(side='bottom', fill='x')
         self.treescrolly.pack(side='right', fill='y')
 
-        # threads
-        # self.resize_thread = threading.Thread(target=self.resize_timer, name='Resize thread', daemon=True)
-        # # self.resize_thread.start()
-
-    def new_project(self):
+    def new_project(self, e=None):
         new_values = CreateProject().show()
 
         if new_values != None:
@@ -107,7 +109,7 @@ class MainWindow(tk.Tk):
                 
                 messagebox.showinfo("Export", "Succesfully created data!")          
 
-    def open_project(self):
+    def open_project(self, e=None):
         file = filedialog.askopenfilename()
         file_handle = open(file)
         self.values = json.load(file_handle)
@@ -129,7 +131,7 @@ class MainWindow(tk.Tk):
             text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags='all')
             self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
 
-    def save(self):
+    def save(self, e=None):
 
         if self.values != None:
             
@@ -150,6 +152,10 @@ class MainWindow(tk.Tk):
             messagebox.showinfo("Saving completed", "Success!")
         else:
             messagebox.showerror("Error saving", "No project opened.")
+
+    def close(self, e=None):
+        self.save()
+        self.destroy()
 
     def clear_treeview(self):
         self.treeview.delete(*self.treeview.get_children())

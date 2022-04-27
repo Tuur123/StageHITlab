@@ -12,3 +12,6 @@ output*mp4
 *.npy
 *.prof
 video.mp4
+build
+*.spec
+dist
