@@ -2,7 +2,6 @@ import json
 import math
 import shutil
 import pandas as pd
-import threading
 
 import tkinter as tk
 from tkinter import *
@@ -21,7 +20,7 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        # bind resize event
+        # force fullscreen
         self.attributes('-fullscreen', True)
 
         # set values 
@@ -38,10 +37,14 @@ class MainWindow(tk.Tk):
         file_menu.add_command(label='New', command=self.new_project, accelerator="Ctrl+N")       
         file_menu.add_command(label='Open', command=self.open_project, accelerator="Ctrl+O")
         file_menu.add_command(label='Save', command=self.save, accelerator="Ctrl+S")
-        file_menu.add_command(label='Close', command=self.quit, accelerator="Ctrl+Q")
+        file_menu.add_command(label='Close', command=self.close, accelerator="Ctrl+Q")
+
+        edit_menu = Menu(menubar, tearoff=0)
+        edit_menu.add_command(label='Remove AOIs', command=self.remove_aois, accelerator="Ctr+d")
 
         # add menu to menubar
         menubar.add_cascade(label='File', menu=file_menu)
+        menubar.add_cascade(label='Edit', menu=edit_menu)
         self.config(menu=menubar)
 
         # create tabs
@@ -59,6 +62,7 @@ class MainWindow(tk.Tk):
         self.bind('<Control-n>', self.new_project)
         self.bind('<Control-o>', self.open_project)
         self.bind('<Control-q>', self.close)
+        self.bind('<Control-d>', self.remove_aois)
 
         # create img container
         self.img = ImageTk.PhotoImage(file='./assets/placeholder.png')
@@ -125,37 +129,44 @@ class MainWindow(tk.Tk):
             name = aoi['name']
 
             r = 5
-            id = self.canvas.create_rectangle(*aoi['coords'], outline='red', tags='all')
-            close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags='all')
+            id = self.canvas.create_rectangle(*aoi['coords'], outline='red', tags=('aoi', 'box'))
+            close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags=('aoi', 'close'))
 
-            text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags='all')
+            text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags=('aoi', 'text'))
             self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
 
     def save(self, e=None):
 
-        if self.values != None:
+        if self.values:
             
             aoi_coords = []
 
-            for aoi in self.aoi_list:
-                aoi_coords.append({'name': aoi['name'],
-                                   'coords': self.canvas.coords(aoi['id']),
-                                   'close': self.canvas.coords(aoi['close'])})
+            try:
+                for aoi in self.aoi_list:
+                    aoi_coords.append({
+                                    'name': aoi['name'],
+                                    'coords': self.canvas.coords(aoi['id']),
+                                    'close': self.canvas.coords(aoi['close'])})
 
-            self.values['AOIs'] = aoi_coords
-            json_values = json.dumps(self.values, indent=4)
+                self.values['AOIs'] = aoi_coords
+                json_values = json.dumps(self.values, indent=4)
 
-            with open(f"{self.values['project']}/project.json", 'w') as f:
-                f.write(json_values)
-                f.close()
+                with open(f"{self.values['project']}/project.json", 'w') as f:
+                    f.write(json_values)
+                    f.close()
 
-            messagebox.showinfo("Saving completed", "Success!")
-        else:
-            messagebox.showerror("Error saving", "No project opened.")
+                if not e: # only show messagebox if user directly interacted with save function
+                    messagebox.showinfo("Info", "Saving complete.")
+            except Exception as e:
+                messagebox.showerror("Error saving", e)            
 
     def close(self, e=None):
         self.save()
         self.destroy()
+
+    def remove_aois(self, e=None):
+        self.canvas.delete('aoi')
+        self.aoi_list = []
 
     def clear_treeview(self):
         self.treeview.delete(*self.treeview.get_children())
@@ -176,26 +187,28 @@ class MainWindow(tk.Tk):
 
     def canvas_click_handler(self, event):
 
-        for aoi in self.aoi_list:
+        if self.values:
 
-            x, y, w, h = self.canvas.coords(aoi['close'])
-            center = ((x + w) / 2, (y + h) / 2)
+            for aoi in self.aoi_list:
 
-            x = (event.x - center[0]) ** 2
-            y = (event.y - center[1]) ** 2
+                x, y, w, h = self.canvas.coords(aoi['close'])
+                center = ((x + w) / 2, (y + h) / 2)
 
-            distance = math.sqrt(x+y)
+                x = (event.x - center[0]) ** 2
+                y = (event.y - center[1]) ** 2
 
-            if distance < 6:
-                self.canvas.delete(aoi['close'])
-                self.canvas.delete(aoi['id'])
-                self.canvas.delete(aoi['text'])
-                self.aoi_list.remove(aoi)
-                return
+                distance = math.sqrt(x+y)
 
-        self.line_start_x = event.x
-        self.line_start_y = event.y
-        self.drawing = True
+                if distance < 6:
+                    self.canvas.delete(aoi['close'])
+                    self.canvas.delete(aoi['id'])
+                    self.canvas.delete(aoi['text'])
+                    self.aoi_list.remove(aoi)
+                    return
+
+            self.line_start_x = event.x
+            self.line_start_y = event.y
+            self.drawing = True
 
     def draw_motion(self, event):
 
@@ -207,7 +220,7 @@ class MainWindow(tk.Tk):
 
         if self.drawing:
             self.canvas.delete('temp_line_objects')
-            id = self.canvas.create_rectangle(self.line_start_x, self.line_start_y, event.x, event.y, outline='red', tags='all')
+            id = self.canvas.create_rectangle(self.line_start_x, self.line_start_y, event.x, event.y, outline='red', tags=('aoi', 'box'))
             name = simpledialog.askstring("Input", "AOI name?", parent=self)
 
             if name == None:
@@ -215,9 +228,9 @@ class MainWindow(tk.Tk):
             else:
                         
                 x, y, w, h = self.canvas.coords(id)
-                text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags='all')
+                text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags=('aoi', 'text'))
                 r = 5
-                close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags='all')
+                close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags=('aoi', 'close'))
                 self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
             
             self.drawing = False
