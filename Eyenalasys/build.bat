@@ -1,1 +1,0 @@
-pyinstaller --paths="assets" --paths="C:\Users\Arthur\anaconda3\lib\site-packages\cv2" -n eyenalasys main.py

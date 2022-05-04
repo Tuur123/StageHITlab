@@ -1,17 +1,20 @@
+import base64
 import json
 import math
 import shutil
+
 import pandas as pd
+from io import BytesIO
 
 import tkinter as tk
 from tkinter import *
-from tkinter import ttk
-from tkinter import messagebox, filedialog, simpledialog
-from PIL import ImageTk, Image
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from PIL import Image, ImageTk
+
+from GUI.Resources import *
 from GUI.Export import ExportInfo
 from GUI.CreateProject import CreateProject
-
 from Heatmap.HeatmapMaker import HeatmapMaker
 
 
@@ -65,7 +68,10 @@ class MainWindow(tk.Tk):
         self.bind('<Control-d>', self.remove_aois)
 
         # create img container
-        self.img = ImageTk.PhotoImage(file='./assets/placeholder.png')
+        byte_data = base64.b64decode(placeholder_base64)
+        image_data = BytesIO(byte_data)
+        image = Image.open(image_data)
+        self.img = ImageTk.PhotoImage(image)
         self.canvas = Canvas(pan_tab)
         self.canvas.bind('<Button-1>', self.canvas_click_handler)
         self.canvas.bind('<B1-Motion>', self.draw_motion)

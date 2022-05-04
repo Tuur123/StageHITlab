@@ -15,3 +15,5 @@ video.mp4
 build
 *.spec
 dist
+*.pyo
+config.json
