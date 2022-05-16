@@ -61,7 +61,6 @@ class Convert2DGPU:
         self.updating = False
 
         data = pd.DataFrame(results, columns=['world_index', 'X', 'Y'])
-        data = data.dropna()
 
         return data
 

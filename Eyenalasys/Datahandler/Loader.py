@@ -39,25 +39,20 @@ class Loader:
 
         if self.tracker == 'pupillabs':
 
-            df = pd.read_csv(self.data_file)
-            df['X'] = df['norm_pos_x'] * self.world_width
-            df['Y'] = self.world_height - df['norm_pos_y'] * self.world_height
-            df = df[['world_index', 'X', 'Y']]
+            export = pd.read_csv(self.data_file)
+            export['X'] = export['norm_pos_x'] * self.world_width
+            export['Y'] = self.world_height - export['norm_pos_y'] * self.world_height
 
-            data = df.astype({'world_index': int, 'X': int, 'Y': int})
+            final_dataset = data_to_convert = export.astype({'world_index': int, 'X': int, 'Y': int})
 
         if self.tracker == 'tobii':
 
-            df = pd.read_csv(self.data_file, sep='\t')
-
-            df = df[['Recording timestamp', 'Gaze point X', 'Gaze point Y', 'Eye movement type']]
-
-            if df['Recording timestamp'][0] != 0: # we need to make sure timestamps start at 0
-                df['Recording timestamp'] = (df['Recording timestamp'] - df['Recording timestamp'][0])
+            export = pd.read_csv(self.data_file, sep='\t')
+            final_dataset = export
 
             # timestamp in microseconds: / 1000
-            df['Recording timestamp'] = df['Recording timestamp'] / 1000
-            df['world_index'] = None
+            # export['Recording timestamp'] = export['Recording timestamp'] / 1000
+            export['world_index'] = None
 
             # convert timestamps into frame indeces
             window_start = 0
@@ -65,29 +60,35 @@ class Loader:
                                 
                 window_end = self.frame_time * frame_idx + self.frame_time
 
-                indeces = df.index[(df['Recording timestamp'] >= window_start) & (df['Recording timestamp'] < window_end)]
-                df.iloc[indeces, [4]] = frame_idx
+                indeces = export.index[(export['Recording timestamp'] >= window_start) & (export['Recording timestamp'] < window_end)]
+                export.iloc[indeces, export.columns.get_loc('world_index')] = frame_idx
 
                 window_start = window_end
 
-            df['X'] = np.array(df['Gaze point X'].values).astype(np.uint16)
-            df['Y'] = np.array(df['Gaze point Y'].values).astype(np.uint16)
+            export.dropna(inplace=True, subset=['Gaze point X', 'Gaze point Y']) # drop NA from original dataset
+            export['X'] = np.array(export['Gaze point X'].values).astype(np.uint16)
+            export['Y'] = np.array(export['Gaze point Y'].values).astype(np.uint16)
 
-            data = df[['world_index', 'X', 'Y']]
-            data = data.loc[~(data[['X', 'Y']]==0).all(axis=1)]
+            data_to_convert = export[['world_index', 'X', 'Y']]
 
 
-        self.converter = Convert2DGPU(data, self.world_panorama, self.vidcap, self.message_q)
+        self.converter = Convert2DGPU(data_to_convert, self.world_panorama, self.vidcap, self.message_q)
         converted_data = self.converter.Get2D()
-        
+
+        final_dataset['world_index'] = converted_data['world_index']
+        final_dataset['X'] = converted_data['X']
+        final_dataset['Y'] = converted_data['Y']
+        final_dataset.dropna(inplace=True, subset=['X', 'Y']) # drop NA from original dataset
 
         if self.export: # create converted_data export
 
-            converted_data.to_csv(self.export, index=False)
+            final_dataset.to_csv(self.export, index=False)
 
-            print(f"mean: {converted_data['X'].mean()} {converted_data['Y'].mean()}, std: {converted_data['X'].std()} {converted_data['Y'].std()}")
+            print(f"mean: {final_dataset['X'].mean()} {final_dataset['Y'].mean()}, std: {final_dataset['X'].std()} {final_dataset['Y'].std()}")
+            print(f"% of points transformed: {round((len(final_dataset['X'] / len(export['X']))) * 100, 2)}")
+
 
         self.running = False
 
         self.message_q.put('Done')
-        self.message_q.put(converted_data)
+        self.message_q.put(final_dataset)
