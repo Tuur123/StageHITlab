@@ -7,21 +7,5 @@
     },
     "tracker": "pupillabs",
     "project": "C:/Users/Arthur/Desktop/school/StageHITlab/Eyenalasys/data/pupillabs/test",
-    "AOIs": [
-        {
-            "name": "nb ",
-            "coords": [
-                613.0,
-                248.0,
-                872.0,
-                369.0
-            ],
-            "close": [
-                867.0,
-                243.0,
-                877.0,
-                253.0
-            ]
-        }
-    ]
+    "AOIs": []
 }

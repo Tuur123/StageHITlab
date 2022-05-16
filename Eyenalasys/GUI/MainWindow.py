@@ -112,6 +112,7 @@ class MainWindow(tk.Tk):
 
             if type(self.dataset) is not type(pd.DataFrame()):
                 messagebox.showerror("Error", "Someting went wrong!")
+
             else:
                 self.fill_treeview()
                 self.create_heatmap()
@@ -186,7 +187,7 @@ class MainWindow(tk.Tk):
         for column in self.treeview['columns']:
             self.treeview.heading(column, text=column)
         
-        rows = self.dataset.head(1000).to_numpy().tolist()
+        rows = self.dataset.head(200).to_numpy().tolist()
 
         for row in rows:
             self.treeview.insert("", 'end', values=row)
@@ -248,6 +249,9 @@ class MainWindow(tk.Tk):
     def create_heatmap(self):
         self.heatmap_maker = HeatmapMaker(self.values['files']['panorama'], data=self.dataset, filter=3)
         self.heatmap = Image.fromarray(self.heatmap_maker.make_heatmap())
+
+        self.heatmap.save('hm.png')
+
         self.map_container = self.heatmap_canvas.create_image(0, 0, anchor=NW, image=ImageTk.PhotoImage(self.heatmap))
         self.update_heatmap()
 
