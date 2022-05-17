@@ -1,6 +1,6 @@
 import pygame, sys
 from pygame.locals import *
-from pupilPlayer import GetCoords
+from pupilPlayer import GetCoordsPLayer1
 
 
 WIDTH = 1920
@@ -10,7 +10,7 @@ MARKER_WIDTH = MARKER_HEIGHT = WIDTH // 8
 
 pygame.init()
 fps = pygame.time.Clock()
-coord_getter = GetCoords()
+coord_getter = GetCoordsPLayer1()
 
 #canvas declaration
 window = pygame.display.set_mode((WIDTH, HEIGHT), 0, 32)
