@@ -33,8 +33,6 @@ class HeatmapMaker:
 
         final = cv2.addWeighted(self.world_panorama, 1, heatmap, 1, 0)
 
-        print(heatmap.shape)
-        print(self.world_panorama.shape)
 
         return final
 
