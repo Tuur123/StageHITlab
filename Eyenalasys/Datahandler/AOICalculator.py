@@ -82,8 +82,6 @@ class AOICalculator:
         x1, y1, w, h = self.__canvas.coords(aoi['id'])
         world_coords, res_coords = self.coords
         
-        
-
         x2, y2 = x1+w, y1+h
 
         in_aoi = (x1 < self.__dataset['X']) & (self.__dataset['X'] < x2) & (y1 < self.__dataset['Y']) & (self.__dataset['Y'] < y2)
