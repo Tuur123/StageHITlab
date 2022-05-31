@@ -16,6 +16,7 @@ from GUI.Resources import *
 from GUI.Export import ExportInfo
 from GUI.CreateProject import CreateProject
 from Heatmap.HeatmapMaker import HeatmapMaker
+from Datahandler.AOICalculator import AOICalculator
 
 
 class MainWindow(tk.Tk):
@@ -92,6 +93,8 @@ class MainWindow(tk.Tk):
         self.treescrollx.pack(side='bottom', fill='x')
         self.treescrolly.pack(side='right', fill='y')
 
+        self.calculator = AOICalculator(self.canvas)
+
     def new_project(self, e=None):
         new_values = CreateProject().show()
 
@@ -118,7 +121,10 @@ class MainWindow(tk.Tk):
                 self.create_heatmap()
                 self.save()
                 
-                messagebox.showinfo("Export", "Succesfully created data!")          
+                self.calculator.coords = [[self.img.width, self.img.height], [self.res_img.width(), self.res_img.height()]]
+                self.calculator.dataset = self.dataset
+
+                messagebox.showinfo("Export", "Succesfully created data!")   
 
     def open_project(self, e=None):
         file = filedialog.askopenfilename()
@@ -141,6 +147,11 @@ class MainWindow(tk.Tk):
 
             text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags=('aoi', 'text'))
             self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
+
+        self.calculator.coords = [[self.img.width, self.img.height], [self.res_img.width(), self.res_img.height()]]
+        self.calculator.dataset = self.dataset
+        self.calculator.aoi_list = self.aoi_list
+        
 
     def save(self, e=None):
 
@@ -174,6 +185,7 @@ class MainWindow(tk.Tk):
     def remove_aois(self, e=None):
         self.canvas.delete('aoi')
         self.aoi_list = []
+        self.calculator.aoi_list = []
 
     def clear_treeview(self):
         self.treeview.delete(*self.treeview.get_children())
@@ -239,7 +251,7 @@ class MainWindow(tk.Tk):
                 r = 5
                 close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags=('aoi', 'close'))
                 self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
-            
+                self.calculator.aoi_list = self.aoi_list
             self.drawing = False
 
     def create_image(self):

@@ -17,21 +17,27 @@ class HeatmapMaker:
         self.y_min = self.data['Y'].min()
         self.y_max = self.data['Y'].max()
 
-    def make_heatmap(self):
+        self.kernel = np.array([[0, -1, 0],
+                                [-1, 5,-1],
+                                [0, -1, 0]])
 
-        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_height, self.pan_width), range=[[0, self.pan_height], [0, self.pan_width]])
+    def make_heatmap(self):
+ 
+        heatmap, xedges, yedges = np.histogram2d(self.data['X'], self.data['Y'], bins=(self.pan_height // 6, self.pan_width // 6), range=[[0, self.pan_height], [0, self.pan_width]])
         heatmap *= 255
         heatmap = heatmap.astype(np.uint8).T
         heatmap = gaussian_filter(heatmap, self.filter)
         heatmap = heatmap.astype(np.uint8)
  
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HSV)
-        heatmap[np.where((heatmap==heatmap[heatmap.shape[0]-1]).all(axis=2))] = [0, 0, 0]
-        heatmap[np.where((heatmap==[0, 0, 255]).all(axis=2))] = [0, 0, 0]
+        # heatmap[np.where((heatmap==heatmap[heatmap.shape[0]-1]).all(axis=2))] = [0, 0, 0]
+        # heatmap[np.where((heatmap==[0, 0, 255]).all(axis=2))] = [0, 0, 0]
 
-        heatmap = np.reshape(heatmap, self.world_panorama.shape)
+        heatmap = cv2.resize(heatmap, (self.pan_height, self.pan_width))
 
         final = cv2.addWeighted(self.world_panorama, 1, heatmap, 1, 0)
+
+        final = cv2.filter2D(src=final, ddepth=-1, kernel=self.kernel)
 
 
         return final
