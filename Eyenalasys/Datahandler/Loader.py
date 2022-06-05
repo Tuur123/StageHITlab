@@ -65,7 +65,9 @@ class Loader:
 
                 window_start = window_end
 
+
             export.dropna(inplace=True, subset=['Gaze point X', 'Gaze point Y']) # drop NA from original dataset
+
             export['X'] = np.array(export['Gaze point X'].values).astype(np.uint16)
             export['Y'] = np.array(export['Gaze point Y'].values).astype(np.uint16)
 
@@ -80,12 +82,12 @@ class Loader:
         final_dataset['Y'] = converted_data['Y']
         final_dataset.dropna(inplace=True, subset=['X', 'Y']) # drop NA from original dataset
 
+
         if self.export: # create converted_data export
 
             final_dataset.to_csv(self.export, index=False)
 
             print(f"mean: {final_dataset['X'].mean()} {final_dataset['Y'].mean()}, std: {final_dataset['X'].std()} {final_dataset['Y'].std()}")
-            print(f"% of points transformed: {round((len(final_dataset['X'] / len(export['X']))) * 100, 2)}")
 
 
         self.running = False

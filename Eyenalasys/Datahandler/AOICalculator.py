@@ -1,51 +1,40 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 class AOICalculator:
 
     def __init__(self, canvas_obj) -> None:
         
         # global vars
-        self.visit_count = []
-        self.time_spent = []
-        self.fixations = []
-        self.pupil_sizes = []
-        self.movement_types = []
+        self.data = []
 
         # internal vars
         self.__aoi_list = []
         self.__canvas = canvas_obj
         self.__dataset = None
-        self.__coords = None
 
-        # vars used per AoI
-        self.__visits = None
-        self.__aoi_points = None
+    def set_data(self, rescaled_coords, original_coords, dataset):
 
-    @property
-    def coords(self):
-        return self.__coords
+        original_width, original_height = original_coords
 
-    @coords.setter
-    def coords(self, new_coords):
-        self.__coords = new_coords
+        dataset = dataset[dataset['X'] >= 0]
+        dataset = dataset[dataset['Y'] >= 0]
+        dataset = dataset[dataset['X'] <= original_width]
+        dataset = dataset[dataset['Y'] <= original_height]
 
-    @property
-    def dataset(self):
-        return self.__dataset
+        interval_min = 0
+        interval_max_x, interval_max_y = rescaled_coords
 
-    @dataset.setter
-    def dataset(self, new_dataset):
-        self.__dataset = new_dataset
+        dataset['X'] = (dataset['X'] - np.min(dataset['X'])) / (np.max(dataset['X']) - np.min(dataset['X'])) * (interval_max_x - interval_min) + interval_min
+        dataset['Y'] = (dataset['Y'] - np.min(dataset['Y'])) / (np.max(dataset['Y']) - np.min(dataset['Y'])) * (interval_max_y - interval_min) + interval_min
 
-        if self.__dataset is not None:
+        self.__dataset = dataset
 
-            self.__dataset['S_DOWN_X'] = self.__dataset['X'].shift(1)
-            self.__dataset['S_UP_X'] = self.__dataset['X'].shift(-1)
-            self.__dataset['S_DOWN_Y'] = self.__dataset['X'].shift(1)
-            self.__dataset['S_UP_Y'] = self.__dataset['Y'].shift(-1)
-
-            self.__dataset.sort_values('world_index')
+        # print(self.__dataset['X'].min(), self.__dataset['X'].max(), self.__dataset['Y'].min(), self.__dataset['Y'].max(), len(self.__dataset))
+        # sns.scatterplot(x=self.__dataset['X'], y=self.__dataset['Y'], hue=self.__dataset['Eye movement type'])
+        # plt.show()
 
     @property
     def aoi_list(self):
@@ -54,185 +43,120 @@ class AOICalculator:
     @aoi_list.setter
     def aoi_list(self, new_list):
         
-        # if len(self.__aoi_list) ==  0 and len(new_list) > 0:
         self.__aoi_list = new_list
 
-        for aoi in self.__aoi_list:
-            self.__calc_globals(aoi)
+        for aoi_idx, aoi in enumerate(self.__aoi_list):
+            self.__calculate(aoi, aoi_idx)
 
-        # # get difference with new list, do we need to recalculate or not?
-        # if len(self.__aoi_list) < len(new_list):
+        print(self.data)
 
-        #     # new AoI
-        #     self.__calc_globals(new_list[-1])
+    def __calculate(self, aoi, aoi_idx):
         
-        # if len(self.__aoi_list) > len(new_list):
-
-        #     # Aoi deleted, keep new_list
-        #     s = set(new_list)
-        #     deleted_AoIs = [x for x in self.__aoi_list if x not in s]
-        #     self.__aoi_list.remove(deleted_AoIs)
-
-    # returns list of all AoI's with their datapoints
-    def __calc_globals(self, aoi):
-        
-        if self.__coords == None:
-            return
-
         x1, y1, w, h = self.__canvas.coords(aoi['id'])
-        world_coords, res_coords = self.coords
-        
+
         x2, y2 = x1+w, y1+h
 
-        in_aoi = (x1 < self.__dataset['X']) & (self.__dataset['X'] < x2) & (y1 < self.__dataset['Y']) & (self.__dataset['Y'] < y2)
-        enter_aoi = in_aoi & ~((x1 < self.__dataset['S_DOWN_X']) & (self.__dataset['S_DOWN_X'] < x2) & (y1 < self.__dataset['S_DOWN_Y']) & (self.__dataset['S_DOWN_Y'] < y2))
-        exit_aoi = in_aoi & ~((x1 < self.__dataset['S_UP_X']) & (self.__dataset['S_UP_X'] < x2) & (y1 < self.__dataset['S_UP_Y']) & (self.__dataset['S_UP_Y'] < y2))
+        in_aoi = (x1 <= self.__dataset['X']) & (self.__dataset['X'] <= x2) & (y1 <= self.__dataset['Y']) & (self.__dataset['Y'] <= y2)
 
         aoi_dataset = self.__dataset
-
-        aoi_dataset['ENTER'] = enter_aoi
         aoi_dataset['IN'] = in_aoi
-        aoi_dataset['EXIT'] = exit_aoi
 
-        self.__aoi_points = aoi_dataset.drop(aoi_dataset[(aoi_dataset['ENTER'] == False) & (aoi_dataset['IN'] == False) & (aoi_dataset['EXIT'] == False)].index)
+        visits = self.__calc_visits(aoi_dataset)
 
-        self.__calculate()
+        aoi_data = pd.DataFrame()
 
-    def __calculate(self):
 
-        self.__calc_visits()
-        self.__calc_time_spent()
-        self.__calc_fixations()
-        self.__calc_pupil_size()
-        self.__calc_movement_types()
+        # calculates total time spent in AoI visit and time spent each visit
+        for visit_idx, visit in enumerate(visits):
 
-        for i in range(len(self.visit_count)):
-            print(self.visit_count[i])
-            print(self.time_spent[i])
-            print(self.fixations[i])
-            print(self.pupil_sizes[i])
-            print(self.movement_types[i])
-
-    # calculates a list of visits
-    def __calc_visits(self):
-
-        visits = []
-        collecting = False
-
-        for index, row in self.__aoi_points.iterrows():
-            
-            if not collecting:
-                tmp_visit = []
-
-            if row['ENTER'] == True and row['EXIT'] == False:
-                tmp_visit.append(row)
-                collecting = True
-
-            if collecting == True and row['IN'] == True:
-                tmp_visit.append(row)
-
-            if row['ENTER'] == False and row['EXIT'] == True:
-                tmp_visit = pd.DataFrame(tmp_visit)
-                if len(tmp_visit) == 0:
-                    collecting = False
-                    continue
-
-                if 'Fixation' in tmp_visit['Eye movement type'].unique():
-                    visits.append(tmp_visit)
-                collecting = False
-        
-        self.__visits = visits
-        self.visit_count.append(len(visits))
-
-    # calculates total time spent in AoI visit and time spent each visit
-    def __calc_time_spent(self):
-        
-        time_spent_dict = dict()
-
-        total = 0
-        for idx, visit in enumerate(self.__visits):
-
-            start_time = visit['Recording timestamp'][0]
-            end_time = visit['Recording timestamp'][-1]
+            start_time = visit['Recording timestamp'].values[0]
+            end_time = visit['Recording timestamp'].values[-1]
 
             duration = end_time - start_time
 
-            time_spent_dict[idx] = duration
-            total += duration
+            aoi_data.loc[visit_idx, 'dwell_time'] = duration
+            aoi_data.loc[visit_idx, 'visit_start'] = start_time
+            aoi_data.loc[visit_idx, 'visit_end'] = end_time
         
-        time_spent_dict['total'] = total
+            duration = 0
 
-        self.time_spent.append(time_spent_dict)
+            for row_idx, row in visit.iterrows():
 
-    # calculates all fixations
-    def __calc_fixations(self):
-        
-        fixation_dict = dict()
-        total = 0
+                if row['Eye movement type'] == 'Fixation':
+                    duration += row['Gaze event duration'] / 1000
+                
+            aoi_data.loc[visit_idx, 'total_fixation_time'] = duration
 
-        for idx, visit in enumerate(self.__visits):
 
-            fixations = visit[visit['Eye movement type'] == 'Fixation']
+            # calculates avg pupil sizes for l en r and change in pupil size
+            pupil_list_l = []
+            pupil_list_r = []
+            timestamps_list = []
 
-            fixation_dict[idx] = fixations
-            total += len(fixations)
+            pupil_visit = visit.dropna(subset=['Pupil diameter left', 'Pupil diameter right'])
+            pupil_l = pupil_visit['Pupil diameter left']
+            pupil_r = pupil_visit['Pupil diameter right']
+            timestamps = pupil_visit['Recording timestamp']
 
-        self.fixations.append(fixation_dict)
+            if len(pupil_l) != 0 and len(pupil_r) != 0:
 
-    # calculates avg pupil sizes for l en r and change in pupil size
-    def __calc_pupil_size(self):
-        
-        pupil_dict = dict()
+                pupil_list_l.append(pupil_l)
+                pupil_list_r.append(pupil_r)
+                timestamps_list.append(timestamps)
 
-        pupil_list_l = []
-        pupil_list_r = []
-        timestamps_list = []
+                l_avg = np.average(pupil_l)
+                r_avg = np.average(pupil_r)
 
-        for idx, visit in enumerate(self.__visits):
+                l_diff = np.average(np.diff(pupil_l) / np.diff(timestamps))
+                r_diff = np.average(np.diff(pupil_r) / np.diff(timestamps))
 
-            pupil_l = visit['Pupil diameter left']
-            pupil_r = visit['Pupil diameter right']
-            timestamps = visit['Recording time']
+                aoi_data.loc[visit_idx, 'pupil_dia_l_avg'] = l_avg
+                aoi_data.loc[visit_idx, 'pupil_dia_r_avg'] = r_avg
+                aoi_data.loc[visit_idx, 'pupil_dia_l_diff'] = l_diff
+                aoi_data.loc[visit_idx, 'pupil_dia_r_diff'] = r_diff
 
-            pupil_list_l.append(pupil_l)
-            pupil_list_r.append(pupil_r)
-            timestamps_list.append(timestamps)
 
-            l_avg = np.average(pupil_l)
-            r_avg = np.average(pupil_r)
-
-            l_diff = np.diff(pupil_l) / np.diff(timestamps)
-            r_diff = np.diff(pupil_r) / np.diff(timestamps)
-
-            pupil_dict[idx] = {'l_avg': l_avg, 'r_avg': r_avg, 'l_diff': l_diff, 'r_diff': r_diff}
-
-        l_avg_total = np.average(pupil_list_l)
-        r_avg_total = np.average(pupil_list_r)
-
-        l_diff_total = np.diff(pupil_list_l) / np.diff(timestamps_list)
-        r_diff_total = np.diff(pupil_list_r) / np.diff(timestamps_list)   
-
-        pupil_dict['total'] = {'l_avg': l_avg_total, 'r_avg': r_avg_total, 'l_diff': l_diff_total, 'r_diff': r_diff_total}
-
-        self.pupil_sizes.append(pupil_dict)
-
-    # calculates countmatrix of movement types in AoI
-    def __calc_movement_types(self):
-
-        movement_dict = dict()
-        total = 0
-
-        if len(self.__visits) == 0:
-            self.movement_types.append(movement_dict)
-            return
-
-        for idx, visit in enumerate(self.__visits):
+            # calculates movement types in AoI
+            types = []
 
             unique, counts = np.unique(visit['Eye movement type'], return_counts=True)
-            movement_dict[idx] = dict(zip(unique, counts))
+            
+            for type, count in zip(unique, counts):
+                aoi_data.loc[visit_idx, type + '_count'] = count
 
-            total = np.add(total, counts)
+                if type not in types:
+                    types.append(type + '_count')
         
-        movement_dict['total'] = dict(zip(unique, counts))
+            for type in types:
+                aoi_data[type].fillna(0, inplace=True)
 
-        self.movement_types.append(movement_dict)
+        self.data.append(aoi_data)
+
+    # calculates a list of visits
+    def __calc_visits(self, aoi_dataset):
+
+        visits = []
+        tmp_visits = []
+        collecting = False
+
+        # idx moet erbij
+        for index, row in aoi_dataset.iterrows():
+            
+            if row['IN'] == True and row['Eye movement type'] == 'Saccade':
+                tmp_visits.append(row)
+                collecting = True
+
+            elif row['IN'] == True and collecting:
+                tmp_visits.append(row)
+
+            else:
+                tmp_visits = pd.DataFrame(tmp_visits)
+                if len(tmp_visits) > 5:
+
+                    if 'Fixation' in tmp_visits['Eye movement type'].unique():
+                        visits.append(tmp_visits)
+
+                tmp_visits = []
+                collecting = False
+        
+        return visits

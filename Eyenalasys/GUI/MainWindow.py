@@ -120,9 +120,8 @@ class MainWindow(tk.Tk):
                 self.fill_treeview()
                 self.create_heatmap()
                 self.save()
-                
-                self.calculator.coords = [[self.img.width, self.img.height], [self.res_img.width(), self.res_img.height()]]
-                self.calculator.dataset = self.dataset
+
+                self.calculator.set_data([self.res_img.width(), self.res_img.height()], [self.img.width(), self.img.height()], self.dataset)
 
                 messagebox.showinfo("Export", "Succesfully created data!")   
 
@@ -148,8 +147,7 @@ class MainWindow(tk.Tk):
             text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags=('aoi', 'text'))
             self.aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
 
-        self.calculator.coords = [[self.img.width, self.img.height], [self.res_img.width(), self.res_img.height()]]
-        self.calculator.dataset = self.dataset
+        self.calculator.set_data([self.res_img.width(), self.res_img.height()], [self.img.width, self.img.height], self.dataset)
         self.calculator.aoi_list = self.aoi_list
         
 
@@ -223,6 +221,7 @@ class MainWindow(tk.Tk):
                     self.canvas.delete(aoi['id'])
                     self.canvas.delete(aoi['text'])
                     self.aoi_list.remove(aoi)
+                    self.calculator.aoi_list = self.aoi_list
                     return
 
             self.line_start_x = event.x
@@ -261,8 +260,6 @@ class MainWindow(tk.Tk):
     def create_heatmap(self):
         self.heatmap_maker = HeatmapMaker(self.values['files']['panorama'], data=self.dataset, filter=3)
         self.heatmap = Image.fromarray(self.heatmap_maker.make_heatmap())
-
-        self.heatmap.save('hm.png')
 
         self.map_container = self.heatmap_canvas.create_image(0, 0, anchor=NW, image=ImageTk.PhotoImage(self.heatmap))
         self.update_heatmap()
