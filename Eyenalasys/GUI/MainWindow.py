@@ -13,6 +13,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from PIL import Image, ImageTk
 
 from GUI.Resources import *
+from GUI.Plotter import Plotter
 from GUI.Export import ExportInfo
 from GUI.CreateProject import CreateProject
 from Heatmap.HeatmapMaker import HeatmapMaker
@@ -93,7 +94,8 @@ class MainWindow(tk.Tk):
         self.treescrollx.pack(side='bottom', fill='x')
         self.treescrolly.pack(side='right', fill='y')
 
-        self.calculator = AOICalculator(self.canvas)
+        plotter = Plotter(tab_control)
+        self.calculator = AOICalculator(self.canvas, plotter)
 
     def new_project(self, e=None):
         new_values = CreateProject().show()
@@ -150,7 +152,6 @@ class MainWindow(tk.Tk):
         self.calculator.set_data([self.res_img.width(), self.res_img.height()], [self.img.width, self.img.height], self.dataset)
         self.calculator.aoi_list = self.aoi_list
         
-
     def save(self, e=None):
 
         if self.values:

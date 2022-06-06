@@ -5,15 +5,13 @@ import matplotlib.pyplot as plt
 
 class AOICalculator:
 
-    def __init__(self, canvas_obj) -> None:
+    def __init__(self, canvas_obj, plotter) -> None:
         
-        # global vars
-        self.data = []
-
         # internal vars
         self.__aoi_list = []
         self.__canvas = canvas_obj
         self.__dataset = None
+        self.__plotter = plotter
 
     def set_data(self, rescaled_coords, original_coords, dataset):
 
@@ -32,10 +30,6 @@ class AOICalculator:
 
         self.__dataset = dataset
 
-        # print(self.__dataset['X'].min(), self.__dataset['X'].max(), self.__dataset['Y'].min(), self.__dataset['Y'].max(), len(self.__dataset))
-        # sns.scatterplot(x=self.__dataset['X'], y=self.__dataset['Y'], hue=self.__dataset['Eye movement type'])
-        # plt.show()
-
     @property
     def aoi_list(self):
         return self.__aoi_list
@@ -45,10 +39,12 @@ class AOICalculator:
         
         self.__aoi_list = new_list
 
+        data = []
+        
         for aoi_idx, aoi in enumerate(self.__aoi_list):
-            self.__calculate(aoi, aoi_idx)
+            data.append(self.__calculate(aoi, aoi_idx))
 
-        print(self.data)
+        self.__plotter.data = data
 
     def __calculate(self, aoi, aoi_idx):
         
@@ -110,10 +106,11 @@ class AOICalculator:
                 l_diff = np.average(np.diff(pupil_l) / np.diff(timestamps))
                 r_diff = np.average(np.diff(pupil_r) / np.diff(timestamps))
 
-                aoi_data.loc[visit_idx, 'pupil_dia_l_avg'] = l_avg
-                aoi_data.loc[visit_idx, 'pupil_dia_r_avg'] = r_avg
-                aoi_data.loc[visit_idx, 'pupil_dia_l_diff'] = l_diff
-                aoi_data.loc[visit_idx, 'pupil_dia_r_diff'] = r_diff
+                avg = np.average(l_avg + r_avg)
+                diff = np.average(l_diff + r_diff)
+
+                aoi_data.loc[visit_idx, 'pupil_dia_avg'] = avg
+                aoi_data.loc[visit_idx, 'pupil_dia_diff'] = diff
 
 
             # calculates movement types in AoI
@@ -122,15 +119,15 @@ class AOICalculator:
             unique, counts = np.unique(visit['Eye movement type'], return_counts=True)
             
             for type, count in zip(unique, counts):
-                aoi_data.loc[visit_idx, type + '_count'] = count
+                aoi_data.loc[visit_idx, type + 's'] = count
 
                 if type not in types:
-                    types.append(type + '_count')
-        
+                    types.append(type + 's')
+            
             for type in types:
                 aoi_data[type].fillna(0, inplace=True)
 
-        self.data.append(aoi_data)
+        return (aoi['name'], aoi_data)
 
     # calculates a list of visits
     def __calc_visits(self, aoi_dataset):
