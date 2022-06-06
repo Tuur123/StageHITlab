@@ -37,14 +37,15 @@ class AOICalculator:
     @aoi_list.setter
     def aoi_list(self, new_list):
         
-        self.__aoi_list = new_list
+        if len(new_list) != None:
+            self.__aoi_list = new_list
 
-        data = []
-        
-        for aoi_idx, aoi in enumerate(self.__aoi_list):
-            data.append(self.__calculate(aoi, aoi_idx))
+            data = []
+            
+            for aoi_idx, aoi in enumerate(self.__aoi_list):
+                data.append(self.__calculate(aoi, aoi_idx))
 
-        self.__plotter.data = data
+            self.__plotter.data = data
 
     def __calculate(self, aoi, aoi_idx):
         

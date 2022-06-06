@@ -17,6 +17,7 @@ from GUI.Plotter import Plotter
 from GUI.Export import ExportInfo
 from GUI.CreateProject import CreateProject
 from Heatmap.HeatmapMaker import HeatmapMaker
+from Datahandler.ObjectDetector import Detector
 from Datahandler.AOICalculator import AOICalculator
 
 
@@ -46,6 +47,7 @@ class MainWindow(tk.Tk):
 
         edit_menu = Menu(menubar, tearoff=0)
         edit_menu.add_command(label='Remove AOIs', command=self.remove_aois, accelerator="Ctr+d")
+        edit_menu.add_command(label='Auto Generate AOIs', command=self.detect_aois, accelerator="Ctr+a")
 
         # add menu to menubar
         menubar.add_cascade(label='File', menu=file_menu)
@@ -68,6 +70,7 @@ class MainWindow(tk.Tk):
         self.bind('<Control-o>', self.open_project)
         self.bind('<Control-q>', self.close)
         self.bind('<Control-d>', self.remove_aois)
+        self.bind('<Control-a>', self.detect_aois)
 
         # create img container
         byte_data = base64.b64decode(placeholder_base64)
@@ -96,6 +99,7 @@ class MainWindow(tk.Tk):
 
         plotter = Plotter(tab_control)
         self.calculator = AOICalculator(self.canvas, plotter)
+        self.object_detector = Detector()
 
     def new_project(self, e=None):
         new_values = CreateProject().show()
@@ -275,6 +279,35 @@ class MainWindow(tk.Tk):
         self.res_map = ImageTk.PhotoImage(image=self.res_map)
         self.heatmap_canvas.itemconfig(self.map_container, image = self.res_map)
 
+    def detect_aois(self, e=None):
+        
+        min_score = 0.1
+        img = self.img.resize((self.winfo_width(), self.winfo_height()))
+        result = self.object_detector.detect(img)
+
+        self.remove_aois()
+        new_aoi_list = []
+        im_width, im_height = self.res_img.width(), self.res_img.height()
+
+        for i in range(min(result["detection_boxes"].shape[0], 10)):
+            if result["detection_scores"][i] >= min_score:
+    
+                name = "{}: {}%".format(result["detection_class_entities"][i].decode("ascii"), int(100 * result["detection_scores"][i]))
+
+
+                ymin, xmin, ymax, xmax = tuple(result["detection_boxes"][i])
+                (left, right, top, bottom) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)
+
+                id = self.canvas.create_rectangle(left, right, top, bottom, outline='red', tags=('aoi', 'box'))
+
+                x, y, w, h = self.canvas.coords(id)
+                text_id = self.canvas.create_text(x, y-10, anchor=W, text=name, fill='red', tags=('aoi', 'text'))
+                r = 5
+                close_id = self.canvas.create_oval(w-r, y-r, w+r, y+r, fill='grey', tags=('aoi', 'close'))
+                new_aoi_list.append({'name': name, 'id': id, 'close': close_id, 'text': text_id})
+
+        self.aoi_list = new_aoi_list 
+        self.calculator.aoi_list = self.aoi_list
 
 if __name__ == "__main__":
     app = MainWindow()

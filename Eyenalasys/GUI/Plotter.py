@@ -67,28 +67,31 @@ class Plotter:
                 figure.subplots_adjust(hspace=0.3)
 
                 for n, aoi in enumerate(self.__aoi_data):
-
-                    # add a new subplot iteratively
-                    ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
-                    sns.barplot(data=aoi[1], y='dwell_time', x='visit_start', ci=None, ax=ax)
-                    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
-                    ax.set(xlabel='seconds')
-                    ax.set(ylabel='seconds')                    
-                    ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                    
+                    if len(aoi[1]) != 0:
+                        # add a new subplot iteratively
+                        ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
+                        sns.barplot(data=aoi[1], y='dwell_time', x='visit_start', ci=None, ax=ax)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set(xlabel='seconds')
+                        ax.set(ylabel='seconds')                    
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
 
             if metric == 'Fixation Length':
 
                 figure.suptitle('Fixation Length', fontsize = plot_width)
                 figure.subplots_adjust(hspace=0.3)
+
                 for n, aoi in enumerate(self.__aoi_data):
 
-                    # add a new subplot iteratively
-                    ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
-                    sns.barplot(data=aoi[1], y='total_fixation_time', x='visit_start', ci=None, ax=ax)
-                    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
-                    ax.set(xlabel='seconds')
-                    ax.set(ylabel='seconds')
-                    ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                    if len(aoi[1]) != 0:
+                        # add a new subplot iteratively
+                        ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
+                        sns.barplot(data=aoi[1], y='total_fixation_time', x='visit_start', ci=None, ax=ax)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set(xlabel='seconds')
+                        ax.set(ylabel='seconds')
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
 
             if metric == 'Pupil Sizes':
 
@@ -97,44 +100,51 @@ class Plotter:
 
                 for n, aoi in enumerate(self.__aoi_data):
 
-                    # add a new subplot iteratively
-                    ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
-                    sns.barplot(data=aoi[1], y='pupil_dia_avg', x='visit_start', ci=None, ax=ax)
-                    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
-                    ax.set(xlabel='seconds')
-                    ax.set(ylabel='millimeter')
-                    ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+
+                    if len(aoi[1]) != 0:
+                        # add a new subplot iteratively
+                        ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
+                        sns.barplot(data=aoi[1], y='pupil_dia_avg', x='visit_start', ci=None, ax=ax)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set(xlabel='seconds')
+                        ax.set(ylabel='millimeter')
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
 
             if metric == 'Pupil Speeds':
 
+                
                 figure.suptitle('Pupil Speeds', fontsize = plot_width)
                 figure.subplots_adjust(hspace=0.3)
 
                 for n, aoi in enumerate(self.__aoi_data):
 
-                    # add a new subplot iteratively
-                    ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
-                    sns.barplot(data=aoi[1], y='pupil_dia_diff', x='visit_start', ci=None, ax=ax)
-                    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
-                    ax.set(xlabel='seconds')
-                    ax.set(ylabel='millimeter per seconds')
-                    ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                    if len(aoi[1]) != 0:
+
+                        # add a new subplot iteratively
+                        ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
+                        sns.barplot(data=aoi[1], y='pupil_dia_diff', x='visit_start', ci=None, ax=ax)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set(xlabel='seconds')
+                        ax.set(ylabel='millimeter per seconds')
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
 
             if metric == 'Movement types':
 
+                
                 figure.suptitle('Movement types', fontsize = plot_width)
                 figure.subplots_adjust(hspace=0.3)
 
                 for n, aoi in enumerate(self.__aoi_data):
 
-                    # add a new subplot iteratively
-                    ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
-                    data = pd.melt(aoi[1], id_vars='visit_start', var_name="movement_type", value_name='count', value_vars=['Fixations', 'Saccades', 'Unclassifieds'])
-                    sns.barplot(data=data, x='visit_start', y='count', hue='movement_type', ci=None, ax=ax)
-                    ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
-                    ax.set(xlabel='seconds')
-                    ax.set(ylabel='movement type count')
-                    ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                    if len(aoi[1]) != 0:
+                        # add a new subplot iteratively
+                        ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
+                        data = pd.melt(aoi[1], id_vars='visit_start', var_name="movement_type", value_name='count', value_vars=['Fixations', 'Saccades', 'Unclassifieds'])
+                        sns.barplot(data=data, x='visit_start', y='count', hue='movement_type', ci=None, ax=ax)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set(xlabel='seconds')
+                        ax.set(ylabel='movement type count')
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
 
             figure_canvas.draw()
             figure_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
