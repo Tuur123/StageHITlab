@@ -1,85 +1,72 @@
+import cv2
+import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 
 class Detector:
 
-	def __init__(self) -> None:
+	def __init__(self, detector) -> None:
 		
-		module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
-		self.__detector = hub.load(module_handle).signatures['default']
+		if detector == 'resnet':
+			module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
+			self.__detector = hub.load(module_handle).signatures['default']
+		else:
+			self.__detector = cv2.dnn.readNet('models\yolo\yolov3.weights', 'models\yolo\yolo.cfg')
+
+			self.__classes = []
+			with open('models\yolo\coco.names', 'r') as f:
+				self.__classes = f.read().splitlines()
+
+		self.detector = detector
+			
+	def set_detector(self, detector):
+		
+		if detector == 'resnet':
+			module_handle = 'models\\resnet_v2'
+			self.__detector = hub.load(module_handle).signatures['default']
+		else:
+			self.__detector = cv2.dnn.readNet('models\yolo\yolov3.weights', 'models\yolo\yolo.cfg')
+
+		self.detector = detector
 
 	def detect(self, img):
 
-		converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-		result = self.__detector(converted_img)
+		if self.detector == 'resnet':
 
-		return {key:value.numpy() for key, value in result.items()}
+			converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+			result = self.__detector(converted_img)
 
+			return {key:value.numpy() for key, value in result.items()}
 
-# def draw_bounding_box_on_image(image, ymin, xmin, ymax, xmax, color, font, thickness=4, display_str_list=()):
-#   """Adds a bounding box to an image."""
-#   draw = ImageDraw.Draw(image)
-#   im_width, im_height = image.size
-#   (left, right, top, bottom) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)
-#   draw.line([(left, top), (left, bottom), (right, bottom), (right, top), (left, top)],  width=thickness, fill=color)
+		else:
 
-#   # If the total height of the display strings added to the top of the bounding
-#   # box exceeds the top of the image, stack the strings below the bounding box
-#   # instead of above.
-#   display_str_heights = [font.getsize(ds)[1] for ds in display_str_list]
-
-#   # Each display_str has a top and bottom margin of 0.05x.
-#   total_display_str_height = (1 + 2 * 0.05) * sum(display_str_heights)
-
-#   if top > total_display_str_height:
-#     text_bottom = top
-#   else:
-#     text_bottom = top + total_display_str_height
-    
-#   # Reverse list and print from bottom to top.
-#   for display_str in display_str_list[::-1]:
-
-#     text_width, text_height = font.getsize(display_str)
-#     margin = np.ceil(0.05 * text_height)
-#     draw.rectangle([(left, text_bottom - text_height - 2 * margin), (left + text_width, text_bottom)], fill=color)
-
-#     draw.text((left + margin, text_bottom - text_height - margin), display_str, fill="black", font=font)
-#     text_bottom -= text_height - 2 * margin
+			blob = cv2.dnn.blobFromImage(np.array(img), 1/255, (608, 608), (0, 0, 0), swapRB=True, crop=False)
+			self.__detector.setInput(blob)
+			outputlayer = self.__detector.getUnconnectedOutLayersNames()
+			results = self.__detector.forward(outputlayer)	
 
 
-# def draw_boxes(image, boxes, class_names, scores, max_boxes=10, min_score=0.1):
-# 	"""Overlay labeled boxes on an image with formatted scores and label names."""
-# 	colors = list(ImageColor.colormap.values())
+			boxes = []
+			confidences = []
+			classes = []
 
+			for result in results:
+				
+				for detection in result:
 
-# 	font = ImageFont.load_default()
+					score = detection[5:]
+					class_id = np.argmax(score)
+					confidence = score[class_id]
 
-# 	for i in range(min(boxes.shape[0], max_boxes)):
-# 		if scores[i] >= min_score:
+					if confidence > 0.1:
 
-# 			ymin, xmin, ymax, xmax = tuple(boxes[i])
-# 			display_str = "{}: {}%".format(class_names[i].decode("ascii"), int(100 * scores[i]))
-# 			color = colors[hash(class_names[i]) % len(colors)]
-# 			image_pil = Image.fromarray(np.uint8(image)).convert("RGB")
-# 			draw_bounding_box_on_image(image_pil, ymin, xmin, ymax, xmax, color, font, display_str_list=[display_str])
-# 			np.copyto(image, np.array(image_pil))
+						w = detection[2]
+						h = detection[3]
+						x = detection[0]
+						y = detection[1]
 
-# 	return image
+						boxes.append([x, y, w, h])
+						confidences.append(float(confidence))
+						classes.append(self.__classes[class_id])
 
-
-
-# def load_img(path):
-#   img = tf.io.read_file(path)
-#   img = tf.image.decode_jpeg(img, channels=3)
-#   return img
-
-
-# def run_detector(detector, path):
-
-#   img = load_img(path)
-
-#   converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-#   result = detector(converted_img)
-
-#   result = {key:value.numpy() for key, value in result.items()}
-#   image_with_boxes = draw_boxes(img.numpy(), result["detection_boxes"], result["detection_class_entities"], result["detection_scores"], min_score=0.3)
+			return {'detection_class_entities': classes, 'detection_boxes': boxes, 'detection_scores': confidences}

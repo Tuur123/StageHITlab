@@ -51,7 +51,7 @@ class Loader:
             final_dataset = export
 
             # timestamp in microseconds: / 1000
-            export['Recording timestamp'] = export['Recording timestamp'] / 1000
+            export['Recording timestamp'] = export['Recording timestamp']
             export['world_index'] = None
 
             # convert timestamps into frame indeces

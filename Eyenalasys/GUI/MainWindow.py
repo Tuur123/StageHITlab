@@ -99,7 +99,7 @@ class MainWindow(tk.Tk):
 
         plotter = Plotter(tab_control)
         self.calculator = AOICalculator(self.canvas, plotter)
-        self.object_detector = Detector()
+        # self.object_detector = Detector('resnet')
 
     def new_project(self, e=None):
         new_values = CreateProject().show()
@@ -289,11 +289,14 @@ class MainWindow(tk.Tk):
         new_aoi_list = []
         im_width, im_height = self.res_img.width(), self.res_img.height()
 
-        for i in range(min(result["detection_boxes"].shape[0], 10)):
-            if result["detection_scores"][i] >= min_score:
-    
-                name = "{}: {}%".format(result["detection_class_entities"][i].decode("ascii"), int(100 * result["detection_scores"][i]))
 
+        for i in range(min(len(result["detection_boxes"]), 10)):
+            if result["detection_scores"][i] >= min_score:
+                
+                try:
+                    name = "{}: {}%".format(result["detection_class_entities"][i].decode("ascii"), int(100 * result["detection_scores"][i]))
+                except AttributeError:
+                    name = "{}: {}%".format(result["detection_class_entities"][i], int(100 * result["detection_scores"][i]))
 
                 ymin, xmin, ymax, xmax = tuple(result["detection_boxes"][i])
                 (left, right, top, bottom) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)
@@ -308,6 +311,8 @@ class MainWindow(tk.Tk):
 
         self.aoi_list = new_aoi_list 
         self.calculator.aoi_list = self.aoi_list
+
+
 
 if __name__ == "__main__":
     app = MainWindow()

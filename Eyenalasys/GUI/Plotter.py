@@ -42,8 +42,8 @@ class Plotter:
             tab.destroy()
 
 
-        plot_width = max_length // 3
-        plot_height = len(self.__aoi_data) * 10
+        plot_width = max_length // 4
+        plot_height = 30
 
         for metric in ['Dwell Time', 'Fixation Length', 'Pupil Sizes', 'Pupil Speeds', 'Movement types']:
 
@@ -72,10 +72,12 @@ class Plotter:
                         # add a new subplot iteratively
                         ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
                         sns.barplot(data=aoi[1], y='dwell_time', x='visit_start', ci=None, ax=ax)
-                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
+                        
                         ax.set(xlabel='seconds')
                         ax.set(ylabel='seconds')                    
-                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Fixation Length':
 
@@ -88,10 +90,10 @@ class Plotter:
                         # add a new subplot iteratively
                         ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
                         sns.barplot(data=aoi[1], y='total_fixation_time', x='visit_start', ci=None, ax=ax)
-                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         ax.set(xlabel='seconds')
                         ax.set(ylabel='seconds')
-                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Pupil Sizes':
 
@@ -105,10 +107,10 @@ class Plotter:
                         # add a new subplot iteratively
                         ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
                         sns.barplot(data=aoi[1], y='pupil_dia_avg', x='visit_start', ci=None, ax=ax)
-                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         ax.set(xlabel='seconds')
                         ax.set(ylabel='millimeter')
-                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Pupil Speeds':
 
@@ -123,10 +125,10 @@ class Plotter:
                         # add a new subplot iteratively
                         ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
                         sns.barplot(data=aoi[1], y='pupil_dia_diff', x='visit_start', ci=None, ax=ax)
-                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         ax.set(xlabel='seconds')
                         ax.set(ylabel='millimeter per seconds')
-                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Movement types':
 
@@ -141,10 +143,10 @@ class Plotter:
                         ax = figure.add_subplot(len(self.__aoi_data), 1, n + 1)
                         data = pd.melt(aoi[1], id_vars='visit_start', var_name="movement_type", value_name='count', value_vars=['Fixations', 'Saccades', 'Unclassifieds'])
                         sns.barplot(data=data, x='visit_start', y='count', hue='movement_type', ci=None, ax=ax)
-                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 45, size = plot_width // 3)
+                        ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         ax.set(xlabel='seconds')
                         ax.set(ylabel='movement type count')
-                        ax.set_title(f'AoI {aoi[0]}', fontsize=plot_height)
+                        ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             figure_canvas.draw()
             figure_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)

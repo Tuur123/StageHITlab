@@ -80,9 +80,9 @@ class AOICalculator:
             for row_idx, row in visit.iterrows():
 
                 if row['Eye movement type'] == 'Fixation':
-                    duration += row['Gaze event duration'] / 1000
-                
-            aoi_data.loc[visit_idx, 'total_fixation_time'] = duration
+                    duration += row['Gaze event duration']
+
+            aoi_data.loc[visit_idx, 'total_fixation_time'] = duration / 1000
 
 
             # calculates avg pupil sizes for l en r and change in pupil size
