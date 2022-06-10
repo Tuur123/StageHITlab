@@ -76,7 +76,7 @@ class Plotter:
                         ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         
                         ax.set(xlabel='seconds')
-                        ax.set(ylabel='seconds')                    
+                        ax.set(ylabel='milliseconds')                    
                         ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Fixation Length':
@@ -92,7 +92,7 @@ class Plotter:
                         sns.barplot(data=aoi[1], y='total_fixation_time', x='visit_start', ci=None, ax=ax)
                         ax.set_xticklabels(ax.get_xticklabels(), rotation = 60, size = plot_width // 4)
                         ax.set(xlabel='seconds')
-                        ax.set(ylabel='seconds')
+                        ax.set(ylabel='milliseconds')
                         ax.set_title(f'AoI {aoi[0]}', fontsize=15)
 
             if metric == 'Pupil Sizes':

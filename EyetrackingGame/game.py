@@ -24,8 +24,8 @@ HALF_PAD_HEIGHT = PAD_HEIGHT // 2
 MARKER_WIDTH = MARKER_HEIGHT = WIDTH // 8
 
 
-player1 = GetCoordsPLayer1()
-player2 = GetCoordsPLayer2()
+# player1 = GetCoordsPLayer1()
+# player2 = GetCoordsPLayer2()
 
 ball_pos = [0,0]
 ball_vel = [0,0]
@@ -235,7 +235,7 @@ while True:
             pygame.quit()
             sys.exit()
 
-    eye_player()
+    # eye_player()
 
     pygame.display.update()
     fps.tick(60)

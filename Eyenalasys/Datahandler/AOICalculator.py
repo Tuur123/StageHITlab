@@ -93,7 +93,7 @@ class AOICalculator:
             pupil_visit = visit.dropna(subset=['Pupil diameter left', 'Pupil diameter right'])
             pupil_l = pupil_visit['Pupil diameter left']
             pupil_r = pupil_visit['Pupil diameter right']
-            timestamps = pupil_visit['Recording timestamp']
+            timestamps = pupil_visit['Recording timestamp'] / 1000
 
             if len(pupil_l) != 0 and len(pupil_r) != 0:
 
