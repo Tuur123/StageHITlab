@@ -127,7 +127,7 @@ class MainWindow(tk.Tk):
                 self.create_heatmap()
                 self.save()
 
-                self.calculator.set_data([self.res_img.width(), self.res_img.height()], [self.img.width(), self.img.height()], self.dataset)
+                self.calculator.set_data([self.res_img.width(), self.res_img.height()], [self.img.width, self.img.height], self.dataset)
 
                 messagebox.showinfo("Export", "Succesfully created data!")   
 
