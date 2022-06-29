@@ -8,10 +8,13 @@ data = data[['Gaze direction right X',
              'Gaze direction right Z',
              'Gaze direction left X',
              'Gaze direction left Y',
-             'Gaze direction left Z']]
+             'Gaze direction left Z',
+             'Computer timestamp']]
 
 data.dropna(inplace=True)
+data['Computer timestamp'] = data['Computer timestamp'] / 1000
 data = data.applymap(str)
+data['Computer timestamp'] = data['Computer timestamp'].astype(float)
 
 str_info = StreamInfo(name='Root', type='eye', channel_count=6, channel_format=cf_string)
 
@@ -30,6 +33,6 @@ for row in data.iterrows():
     sample = row[1].tolist()
 
     # now send it and wait for a bit
-    outlet.push_sample(sample, timestamp=time.time())
+    outlet.push_sample(sample[:-1], timestamp=sample[-1])
     # print(sample)
     time.sleep(0.01)
