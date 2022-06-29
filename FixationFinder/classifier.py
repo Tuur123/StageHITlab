@@ -1,6 +1,7 @@
 import pickle
+import time
 import numpy as np
-from pylsl import StreamInlet, resolve_stream
+from pylsl import StreamInlet, resolve_stream, StreamInfo, StreamOutlet, cf_string
 
 print("looking for a stream...")
 
@@ -9,16 +10,23 @@ streams = resolve_stream('type', 'eye')
 # create a new inlet to read from the stream
 inlet = StreamInlet(streams[0])
 
+str_info = StreamInfo(name='Eye_root', type='eye_movement', channel_count=1, channel_format=cf_string)
+
+channel_names = ['Eye movement type']
+channels = str_info.desc().append_child("channels")
+for name in channel_names:
+    channels.append_child('channel').append_child_value("label", name)
+
+# next make an outlet
+outlet = StreamOutlet(str_info)
+
 current_samples = []
 current_timestamps = []
 velocities = []
 
-def capture():
 
-    global current_samples, current_timestamps, velocities
-
+try:
     while True:
-
 
         if len(current_samples) <= 2:
 
@@ -41,25 +49,25 @@ def capture():
             angle = np.arccos((gaze_dir_avg_x * gaze_dir_avg_x_next + gaze_dir_avg_y * gaze_dir_avg_y_next + gaze_dir_avg_z * gaze_dir_avg_y_next) \
             / (np.sqrt(gaze_dir_avg_x ** 2 + gaze_dir_avg_y ** 2 + gaze_dir_avg_z ** 2) * np.sqrt(gaze_dir_avg_x_next ** 2 + gaze_dir_avg_y_next ** 2 + gaze_dir_avg_y_next ** 2)))
 
-            time = current_timestamps[1] - current_timestamps[0]
+            time_diff = current_timestamps[1] - current_timestamps[0]
 
-            velocity = angle / time
+            velocity = angle / time_diff
             
             if velocity > 0.8:
                 print(f"Saccade, velocity: {velocity}")
+                outlet.push_sample(['Saccade'], timestamp=time.time())
             else:
                 print(f"Fixatie, velocity: {velocity}")
+                outlet.push_sample(['Fixatie'], timestamp=time.time())
 
             velocities.append(velocity)
-
+        
             current_samples = []
             current_timestamps = []
-    
-try:
-    capture()
-except Exception as e:
-    print(f"Error: {e}")
 
+except KeyboardInterrupt:
+    print("Closing...")
+    
 finally:
     with open('velocities.pkl', 'wb') as f:
         pickle.dump(velocities, f)

@@ -13,7 +13,7 @@ data = data[['Gaze direction right X',
 data.dropna(inplace=True)
 data = data.applymap(str)
 
-str_info = StreamInfo(name='Root', type='data_stream', channel_count=6, channel_format=cf_string)
+str_info = StreamInfo(name='Root', type='eye', channel_count=6, channel_format=cf_string)
 
 channel_names = ['Gaze direction right X', 'Gaze direction right Y', 'Gaze direction right Z', 'Gaze direction left X', 'Gaze direction left Y', 'Gaze direction left Z']
 channels = str_info.desc().append_child("channels")
@@ -31,4 +31,5 @@ for row in data.iterrows():
 
     # now send it and wait for a bit
     outlet.push_sample(sample, timestamp=time.time())
+    # print(sample)
     time.sleep(0.01)
